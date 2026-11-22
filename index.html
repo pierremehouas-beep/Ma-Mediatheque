@@ -61,13 +61,33 @@ input:focus,select:focus{outline:none;border-color:var(--gold)}
 .z0,.z{color:var(--mut)}.bad{background:#8c2f25;border-color:#8c2f25}
 .e{color:var(--mut)}.e b{color:var(--gold)}
 #g{flex:1 1 100%}
+
+#tb{position:fixed;left:0;right:0;bottom:0;z-index:7;display:flex;background:rgba(13,12,10,.96);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-top:1px solid rgba(217,180,90,.3);padding-bottom:env(safe-area-inset-bottom,0px)}
+#tb button{flex:1;background:none;border:0;border-radius:0;min-height:56px;padding:6px 0 4px;font-size:20px;line-height:1;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:3px}
+#tb button span{font-size:11px;letter-spacing:.3px}#tb button.on{color:var(--gold)}
+#add{bottom:calc(72px + env(safe-area-inset-bottom,0px))}main{padding-bottom:150px}#ts{bottom:calc(140px + env(safe-area-inset-bottom,0px))}
+body[data-v=s] header>:not(h1),body[data-v=t] header>:not(h1){display:none}
+#bk{position:fixed;left:12px;right:84px;bottom:calc(72px + env(safe-area-inset-bottom,0px));z-index:6;display:flex;align-items:center;gap:6px;background:#1b1912;border:1px solid rgba(217,180,90,.45);border-radius:12px;padding:6px 8px;font-size:13px}#bk[hidden]{display:none}#bk span{flex:1}#bk button{min-height:34px;padding:4px 10px}
+.rw{display:flex;gap:10px;align-items:center}.rb{flex:1;min-width:0}.pz{width:42px;height:62px;object-fit:cover;border-radius:4px;flex:none;background:#1b1a17}
+.it.uh{border-left-color:#8fb8ff}.it.fn{border-left-color:#8fd19e}
+.ov{color:var(--mut);font-style:italic;margin:0 0 8px}
+.ac{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0}.ac select,.ac input{min-height:36px;font-size:16px}
+.cm{width:100%;font-size:16px;font-family:inherit;margin:4px 0;border-radius:10px;padding:8px 10px;background:#141416;color:var(--ink);border:1px solid #2b2822}
+#pick{margin-top:12px}.big{display:flex;gap:12px;background:var(--card);border:1px solid rgba(217,180,90,.35);border-radius:14px;padding:12px;margin-bottom:8px}.big img{width:110px;height:165px;object-fit:cover;border-radius:8px;flex:none}.big .t{font-size:21px}
+.sts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.sts div{background:var(--card);border:1px solid #24211b;border-radius:12px;padding:10px;text-align:center}.sts b{display:block;font:700 22px/1.2 Georgia,serif;color:var(--gold)}.sts small{color:var(--mut);font-size:12px}
+#tv h3{font:700 16px Georgia,serif;margin:18px 0 6px;color:var(--gold)}
+.br2{display:grid;grid-template-columns:110px 1fr 34px;gap:8px;align-items:center;margin:4px 0;font-size:13.5px}.br2 span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.br2 i{display:block;height:10px;border-radius:5px;background:linear-gradient(90deg,#f0d78c,#b8913a);width:var(--w)}.br2 b{text-align:right;color:var(--mut);font-weight:600}
 </style></head><body>
 <header><h1>Ma médiathèque<small id="n"></small><button id="gear" aria-label="Réglages">⚙︎</button></h1>
 <input id="q" type="search" placeholder="Titre, réalisateur, acteur ou production" autocomplete="off">
 <div class="row"><select id="s" aria-label="Trier par"><option value="t">Titre</option><option value="r">Réalisateur</option><option value="y">Année</option><option value="l">Durée</option><option value="g">Genre</option><option value="n">Note</option></select><button id="o" aria-label="Sens du tri">A → Z</button></div>
-<div class="row"><select id="g" aria-label="Genre"><option value="">Tous les genres</option></select><button class="chip" data-k="DVD" aria-pressed="false">DVD</button><button class="chip" data-k="Blu-ray" aria-pressed="false">Blu-ray</button><button class="chip" id="v" aria-pressed="false">Non notés</button><button class="chip" id="fb" aria-expanded="false" aria-controls="pn">Filtres</button></div>
-<div id="pn" hidden><select id="du" aria-label="Tranche de durée"><option value="">Toutes les durées</option></select><select id="dc" aria-label="Décennie"><option value="">Toutes les années</option></select><select id="nm" aria-label="Note minimale"><option value="">Toutes les notes</option><option value="3">3 ★ et plus</option><option value="3.5">3½ ★ et plus</option><option value="4">4 ★ et plus</option><option value="4.5">4½ ★ et plus</option><option value="5">5 ★</option></select><input id="fr" list="lr" placeholder="Réalisateur" autocomplete="off"><input id="fa" list="la" placeholder="Acteur" autocomplete="off"><input id="fpr" list="lp" placeholder="Maison de production" autocomplete="off"><button id="rz" class="z0">Tout réinitialiser</button><datalist id="lr"></datalist><datalist id="la"></datalist><datalist id="lp"></datalist></div></header>
+<div class="row"><select id="g" aria-label="Genre"><option value="">Tous les genres</option></select><button class="chip" id="v" aria-pressed="false">Non notés</button><button class="chip" id="fb" aria-expanded="false" aria-controls="pn">Filtres</button></div>
+<div id="pn" hidden><select id="du" aria-label="Tranche de durée"><option value="">Toutes les durées</option></select><select id="dc" aria-label="Décennie"><option value="">Toutes les années</option></select><select id="nm" aria-label="Note minimale"><option value="">Toutes les notes</option><option value="3">3 ★ et plus</option><option value="3.5">3½ ★ et plus</option><option value="4">4 ★ et plus</option><option value="4.5">4½ ★ et plus</option><option value="5">5 ★</option></select><input id="fr" list="lr" placeholder="Réalisateur" autocomplete="off"><input id="fa" list="la" placeholder="Acteur" autocomplete="off"><input id="fpr" list="lp" placeholder="Maison de production" autocomplete="off"><select id="su" aria-label="Support"><option value="">Tous les supports</option><option>DVD</option><option>Blu-ray</option><option>4K UHD</option><option>Fichier numérique</option></select><select id="st" aria-label="Statut"><option value="">Vus ou non</option><option value="vu">Vus</option><option value="nv">Pas encore vus</option><option value="pr">Prêtés</option></select><button id="rz" class="z0">Tout réinitialiser</button><datalist id="lr"></datalist><datalist id="la"></datalist><datalist id="lp"></datalist></div></header>
 <main id="l"></main>
+<main id="sv" hidden><div class="gr"><select id="sdu" aria-label="Durée"><option value="">Durée : peu importe</option><option value="90">Moins de 1h30</option><option value="120">Moins de 2h</option><option value="150">Moins de 2h30</option></select><select id="sgn" aria-label="Genre"><option value="">Tous les genres</option></select><select id="sst" class="w2" aria-label="Statut"><option value="nv">Pas encore vus</option><option value="">Vus ou non</option></select></div><button id="dice" class="pri" style="width:100%;margin-top:10px;min-height:52px;font-size:18px">🎲 Tire-moi un film</button><div id="pick"><div class="e">Règle tes envies, puis tire au sort.<br>Les films prêtés sont exclus.</div></div></main>
+<main id="tv" hidden></main>
+<div id="bk" hidden><span id="bkt"></span><button id="bkg" class="pri">Sauvegarder</button><button id="bkx" aria-label="Plus tard">✕</button></div>
+<nav id="tb"><button data-t="c" class="on">🎞️<span>Collection</span></button><button data-t="s">🎲<span>Ce soir</span></button><button data-t="w">⭐<span>Souhaits</span></button><button data-t="t">📊<span>Stats</span></button></nav>
 <button id="add" aria-label="Ajouter un film">+</button>
 <div id="cf" hidden role="alertdialog" aria-modal="true" aria-label="Confirmer le retrait"><div class="sh"><h2>Retirer ce film ?</h2><p id="cp"></p><div class="row"><button id="cn" style="flex:1">Annuler</button><button id="cy" class="bad" style="flex:1">Retirer</button></div></div></div>
 <div id="ts" hidden><span id="tt"></span><button id="tu">Annuler</button></div>
@@ -75,7 +95,7 @@ input:focus,select:focus{outline:none;border-color:var(--gold)}
 <div class="row"><button id="cam" class="pri" style="flex:1">📷 Photographier la jaquette</button></div><input id="ph" type="file" accept="image/*" capture="environment" hidden>
 <div class="row"><input id="sq" type="search" placeholder="Ou cherche par titre" autocomplete="off"><button id="sb">Chercher</button></div>
 <div id="sm"></div><div id="sc"></div>
-<div class="gr"><input id="fT" class="w2" placeholder="Titre"><input id="fR" placeholder="Réalisateur"><input id="fY" inputmode="numeric" placeholder="Année"><input id="fD" inputmode="numeric" placeholder="Durée (min)"><select id="fS"><option>DVD</option><option>Blu-ray</option></select><input id="fG" class="w2" placeholder="Genre (ex. Comédie / Action)"><input id="fA" class="w2" placeholder="Acteurs principaux"><input id="fP" class="w2" placeholder="Maison de production"></div>
+<div class="gr"><input id="fT" class="w2" placeholder="Titre"><input id="fR" placeholder="Réalisateur"><input id="fY" inputmode="numeric" placeholder="Année"><input id="fD" inputmode="numeric" placeholder="Durée (min)"><select id="fS"><option>DVD</option><option>Blu-ray</option><option>4K UHD</option><option>Fichier numérique</option></select><input id="fG" class="w2" placeholder="Genre (ex. Comédie / Action)"><input id="fA" class="w2" placeholder="Acteurs principaux"><input id="fP" class="w2" placeholder="Maison de production"></div>
 <div class="row"><button id="fok" class="pri" style="flex:1">Ajouter à ma collection</button></div></div></div>
 <div id="sg" hidden role="dialog" aria-modal="true" aria-label="Réglages"><div class="sh"><div class="hd"><h2>Réglages</h2><button id="gx">Fermer</button></div>
 <p class="hint"><b>Recherche de films</b><br>Ça marche déjà sans rien configurer (Wikidata). Pour des fiches plus complètes, ajoute une clé TMDB gratuite : <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener" style="color:var(--gold)">créer ma clé</a> (compte gratuit, puis « Clé API »).</p>
@@ -89,6 +109,9 @@ input:focus,select:focus{outline:none;border-color:var(--gold)}
 <div class="row"><button id="sh" class="pri" style="flex:1">Partager l'appli</button></div>
 <p class="hint" style="margin-top:16px"><b>Sauvegarde</b><br>Ta collection vit dans la mémoire de ce navigateur : exporte un CSV de temps en temps.</p>
 <div class="row"><button id="ex" style="flex:1">Exporter en CSV</button><button id="im" style="flex:1">Importer un CSV</button></div><input id="imf" type="file" accept=".csv,text/csv,text/plain,.txt" hidden>
+<p class="hint" style="margin-top:16px"><b>Versions de secours</b><br>Copies automatiques gardées sur cet appareil (5 max) : une par jour, et avant chaque import, vidage ou restauration.</p><div id="snl"></div>
+<p class="hint" style="margin-top:16px"><b>Affiches et synopsis</b><br>Les récupère pour tous les films déjà dans ta collection (via TMDB). Un titre ambigu peut tomber sur le mauvais film : relis les affiches.</p>
+<div class="row"><button id="enb" style="flex:1">Récupérer les affiches</button></div>
 <p id="sgs" class="hint"></p>
 <p class="hint" style="font-size:12px">Données : TMDB (ce produit utilise l'API TMDB mais n'est ni approuvé ni certifié par TMDB) et Wikidata (CC0).</p>
 <button id="clr" class="z0" style="width:100%;margin-top:6px">Vider la collection</button></div></div>
@@ -96,9 +119,10 @@ input:focus,select:focus{outline:none;border-color:var(--gold)}
 const $=i=>document.getElementById(i);
 const KEY="mt_gemini_key",MOD="mt_gemini_model",DEF_MOD="gemini-flash-lite-latest";
 let D=[],db=null,asc=true,sup=new Set(),nn=false,G=[];
+let quiet=0;const bump=()=>{if(quiet)return;try{localStorage.setItem("mt_chg",(+localStorage.getItem("mt_chg")||0)+1)}catch(e){}};
 /* ---------- IndexedDB (base créée vierge au premier lancement) ---------- */
-const idb=(m,fn)=>db?new Promise((res,rej)=>{const tx=db.transaction("films",m),r=fn(tx.objectStore("films"));tx.oncomplete=()=>res(r&&r.result);tx.onerror=tx.onabort=()=>rej(tx.error)}):Promise.resolve([]);
-const openDB=()=>new Promise((res,rej)=>{const q=indexedDB.open("mediatheque",1);q.onupgradeneeded=()=>{q.result.createObjectStore("films",{keyPath:"id"})};q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)});
+const idb=(m,fn)=>(m==="readwrite"&&bump(),db)?new Promise((res,rej)=>{const tx=db.transaction("films",m),r=fn(tx.objectStore("films"));tx.oncomplete=()=>res(r&&r.result);tx.onerror=tx.onabort=()=>rej(tx.error)}):Promise.resolve([]);
+const openDB=()=>new Promise((res,rej)=>{const q=indexedDB.open("mediatheque",2);q.onupgradeneeded=()=>{const d=q.result;if(!d.objectStoreNames.contains("films"))d.createObjectStore("films",{keyPath:"id"});if(!d.objectStoreNames.contains("snap"))d.createObjectStore("snap",{keyPath:"id"})};q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)});
 const put=f=>idb("readwrite",s=>{s.put(f)}).catch(()=>{});
 const putMany=a=>idb("readwrite",s=>{a.forEach(f=>s.put(f))}).catch(()=>{});
 /* ---------- utilitaires ---------- */
@@ -118,42 +142,115 @@ const mkid=(t,y)=>t+"|"+(y||"");
 [...TR,"Non renseignée"].forEach(t=>opt($("du"),t));
 function lists(){G=[...new Set(D.flatMap(x=>x.g.split(" / ").filter(Boolean)))].sort((a,b)=>a.localeCompare(b,"fr"));
  const gv=$("g").value,dv=$("dc").value;
- $("g").innerHTML='<option value="">Tous les genres</option>';G.forEach(g=>opt($("g"),g));$("g").value=gv;
+ $("g").innerHTML='<option value="">Tous les genres</option>';G.forEach(g=>opt($("g"),g));$("g").value=gv;{const sv=$("sgn").value;$("sgn").innerHTML='<option value="">Tous les genres</option>';G.forEach(g=>opt($("sgn"),g));$("sgn").value=sv}
  $("dc").innerHTML='<option value="">Toutes les années</option>';[...new Set(D.map(x=>dec(x.y)).filter(Boolean))].sort((a,b)=>a-b).forEach(d=>opt($("dc"),d,"Années "+d));$("dc").value=dv;
  [["lr",x=>sp(x.r)],["la",x=>sp(x.a)],["lp",x=>sp(x.p)]].forEach(([id,f])=>{$(id).innerHTML="";uniq(f).forEach(v=>opt($(id),v))})}
 const cmp={t:x=>key(x.t),r:x=>key(x.r),y:x=>x.y,l:x=>x.d,g:x=>key(x.g),n:x=>x.n===undefined?"":x.n};
 const rt=v=>{v=v||0;let h="";for(let i=1;i<=5;i++){const d=Math.max(0,Math.min(1,v-(i-1)));h+=`<span class="st"><i class="bg">★</i><i class="fg" style="clip-path:inset(0 ${100-d*100}% 0 0)">★</i><b data-v="${i-.5}"></b><b data-v="${i}"></b></span>`}return h+'<button class="z" data-v="0">0</button><button class="z" data-v="">Effacer</button>'};
 const count=()=>{const k=D.filter(x=>x.n!==undefined).length;return k?" · "+k+" noté"+(k>1?"s":""):""};
 const card=id=>[...$("l").children].find(c=>c.dataset.id===id);
+let view="c";
+const SUP=["DVD","Blu-ray","4K UHD","Fichier numérique"],SC={"Blu-ray":"br","4K UHD":"uh","Fichier numérique":"fn"},IMG="https://image.tmdb.org/t/p/";
+const supOf=v=>/4k|uhd/i.test(v)?"4K UHD":/blu/i.test(v)?"Blu-ray":/num|fichier|digital/i.test(v)?"Fichier numérique":"DVD";
+const fd=v=>v?String(v).split("-").reverse().join("/"):"";
+const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
+function rowHTML(x,open){
+ const acts=x.wl?'<button class="pri own">✓ Je l\'ai ! Ajouter à ma collection</button>':(x.vu?'<label class="vl">Vu le <input type="date" class="vd" value="'+esc(x.vu)+'"></label><button class="z vub">Pas vu</button>':'<button class="pri vub">✓ Marquer comme vu</button>')+(x.l?'<span class="w">Prêté à '+esc(x.l.n)+' depuis le '+fd(x.l.d)+'</span><button class="z lnb">Rendu</button>':'<button class="z lnb">Prêter…</button>');
+ return `<div class="it ${SC[x.s]||""}${open?" open":""}" data-id="${esc(x.id)}" tabindex="0"><div class="rw">${x.pi?`<img class="pz" loading="lazy" alt="" src="${IMG}w154${esc(x.pi)}">`:""}<div class="rb"><div class="top"><div class="t">${esc(x.t)}</div><span class="nt">${x.wl?"":nl(x.n)}</span></div><div class="m">${esc([x.r,x.y,fmt(x.d),x.s].filter(Boolean).join(", ")+(x.vu?" · ✓ vu":"")+(x.l?" · prêté à "+x.l.n:""))}</div></div></div><div class="d">${x.ov?`<p class="ov">${esc(x.ov)}</p>`:""}<p><b>Genre :</b> ${esc(x.g||"à compléter")}</p><p><b>Avec :</b> ${esc(x.a||"à compléter")}</p><p><b>Production :</b> ${esc(x.p||"à compléter")}</p><div class="ac"><select class="sup" aria-label="Support">${SUP.map(v=>`<option${v===x.s?" selected":""}>${v}</option>`).join("")}</select>${acts}</div><textarea class="cm" rows="2" placeholder="Commentaire, souvenir, état du disque…">${esc(x.c||"")}</textarea><p><a href="${esc(yurl(x.t))}" target="_blank" rel="noopener">Voir sur Allociné</a> · <a href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent("jaquette "+x.s+" "+x.t+(x.y?" "+x.y:""))}" target="_blank" rel="noopener">Voir la jaquette</a></p>${x.v?'<p class="w">Ajouté depuis l\'appli : infos à vérifier</p>':""}<button class="z0 del">${x.wl?"Retirer de mes souhaits":"Retirer de la collection"}</button>${x.wl?"":`<div class="rt">${rt(x.n)}</div>`}</div></div>`}
+function refresh(id,open){const f=D.find(x=>x.id===id),c=card(id);if(f&&c)c.outerHTML=rowHTML(f,open===undefined?c.classList.contains("open"):open)}
 function draw(){
- const q=sk($("q").value.trim()),g=$("g").value,s=$("s").value,f=cmp[s],du=$("du").value,dc=$("dc").value,nm=$("nm").value,fr=key($("fr").value.trim()),fa=key($("fa").value.trim()),fp=key($("fpr").value.trim());
- let r=D.filter(x=>(!q||sk(x.t+" "+x.r+" "+x.a+" "+x.p).includes(q))&&(!g||x.g.split(" / ").includes(g))&&(!sup.size||sup.has(x.s))&&(!nn||x.n===undefined)&&(!du||tr(x.d)===du)&&(!dc||String(dec(x.y))===dc)&&(!nm||x.n>=+nm)&&(!fr||key(x.r).includes(fr))&&(!fa||key(x.a).includes(fa))&&(!fp||key(x.p).includes(fp)));
+ const q=sk($("q").value.trim()),g=$("g").value,s=$("s").value,f=cmp[s],du=$("du").value,dc=$("dc").value,nm=$("nm").value,fr=key($("fr").value.trim()),fa=key($("fa").value.trim()),fp=key($("fpr").value.trim()),st=$("st").value,W=view==="w";
+ let r=D.filter(x=>W===!!x.wl&&(!q||sk(x.t+" "+x.r+" "+x.a+" "+x.p).includes(q))&&(!g||x.g.split(" / ").includes(g))&&(!sup.size||sup.has(x.s))&&(!nn||x.n===undefined)&&(!du||tr(x.d)===du)&&(!dc||String(dec(x.y))===dc)&&(!nm||x.n>=+nm)&&(!fr||key(x.r).includes(fr))&&(!fa||key(x.a).includes(fa))&&(!fp||key(x.p).includes(fp))&&(!st||(st==="vu"?x.vu:st==="nv"?!x.vu:x.l)));
  r.sort((a,b)=>{let p=f(a),c=f(b);if(p===""&&c!=="")return 1;if(c===""&&p!=="")return -1;const z=typeof p==="number"?p-c:String(p).localeCompare(String(c),"fr");return (asc?z:-z)||key(a.t).localeCompare(key(b.t),"fr")});
- const na=[du,dc,nm,fr,fa,fp].filter(Boolean).length;$("fb").textContent=na?"Filtres ("+na+")":"Filtres";
- $("n").textContent=D.length?r.length+" film"+(r.length>1?"s":"")+" sur "+D.length+count():"";
- $("l").innerHTML=!D.length?'<div class="e">Ta médiathèque est vide.<br>Appuie sur <b>+</b> pour ajouter un film,<br>ou sur ⚙︎ pour importer un CSV.</div>':r.length?r.map(x=>`<div class="it ${x.s=="Blu-ray"?"br":""}" data-id="${esc(x.id)}" tabindex="0"><div class="top"><div class="t">${esc(x.t)}</div><span class="nt">${nl(x.n)}</span></div><div class="m">${esc([x.r,x.y,fmt(x.d),x.s].filter(Boolean).join(", "))}</div><div class="d"><p><b>Genre :</b> ${esc(x.g||"à compléter")}</p><p><b>Avec :</b> ${esc(x.a||"à compléter")}</p><p><b>Production :</b> ${esc(x.p||"à compléter")}</p><p><a href="${esc(yurl(x.t))}" target="_blank" rel="noopener">Voir sur Allociné</a> · <a href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent("jaquette "+x.s+" "+x.t+(x.y?" "+x.y:""))}" target="_blank" rel="noopener">Voir la jaquette</a></p>${x.v?'<p class="w">Ajouté depuis l\'appli : infos à vérifier</p>':""}<button class="z0 del">Retirer de la collection</button><div class="rt">${rt(x.n)}</div></div></div>`).join(""):'<div class="e">Aucun film ne correspond.</div>';
-}
-/* ---------- notes ---------- */
+ const na=[du,dc,nm,fr,fa,fp,st,$("su").value].filter(Boolean).length;$("fb").textContent=na?"Filtres ("+na+")":"Filtres";
+ const N=D.filter(x=>!x.wl).length,tot=W?D.length-N:N;
+ $("n").textContent=tot?r.length+(W?" souhait":" film")+(r.length>1?"s":"")+" sur "+tot+(W?"":count()):"";
+ $("l").innerHTML=!tot?(W?'<div class="e">Ta liste de souhaits est vide.<br>Appuie sur <b>+</b> pour noter les films que tu cherches.</div>':'<div class="e">Ta médiathèque est vide.<br>Appuie sur <b>+</b> pour ajouter un film,<br>ou sur ⚙︎ pour importer un CSV.</div>'):r.length?r.map(x=>rowHTML(x)).join(""):'<div class="e">Aucun film ne correspond.</div>';
+ bkCheck()}
+/* ---------- notes, vu, prêts, commentaires ---------- */
 function rate(id,v){const f=D.find(x=>x.id===id);if(!f)return;if(v===""||f.n===+v)delete f.n;else f.n=+v;put(f);
  const c=card(id);if(c){c.querySelector(".rt").innerHTML=rt(f.n);c.querySelector(".nt").textContent=nl(f.n)}
  $("n").textContent=$("n").textContent.replace(/ · \d+ notés?$/,"")+count()}
-$("l").onclick=e=>{const it=e.target.closest(".it");if(!it)return;const id=it.dataset.id;
+async function enrich(f){if(f.pi||f.eq||!tkey())return false;
+ try{const p={query:f.t,language:"fr-FR",include_adult:"false"};if(f.y)p.year=f.y;
+  let r=(await tget("/search/movie",p)).results||[];
+  if(!r.length&&f.y){delete p.year;r=(await tget("/search/movie",p)).results||[]}
+  const m=r.find(x=>f.y&&(x.release_date||"").slice(0,4)==String(f.y))||r[0];
+  quiet=1;if(!m||(!m.poster_path&&!m.overview)){f.eq=1;put(f);quiet=0;return false}
+  if(m.poster_path)f.pi=m.poster_path;if(m.overview)f.ov=m.overview;put(f);quiet=0;return true}
+ catch(e){quiet=0;return false}}
+$("l").onclick=e=>{const it=e.target.closest(".it");if(!it)return;const id=it.dataset.id,f=D.find(x=>x.id===id);if(!f)return;
  if(e.target.closest(".del")){askDel(id);return}
  const h=e.target.closest("[data-v]");if(h){rate(id,h.dataset.v);return}
- if(e.target.closest("a,.rt"))return;it.classList.toggle("open")};
+ if(e.target.closest(".vub")){if(f.vu)delete f.vu;else f.vu=today();put(f);refresh(id);return}
+ if(e.target.closest(".lnb")){if(f.l)delete f.l;else{const n=(prompt("Prêté à qui ?")||"").trim();if(!n)return;f.l={n,d:today()}}put(f);refresh(id);return}
+ if(e.target.closest(".own")){delete f.wl;put(f);lists();draw();return}
+ if(e.target.closest(".rw")){const o=it.classList.toggle("open");if(o&&!f.pi&&!f.eq)enrich(f).then(ok=>{if(ok)refresh(id)})}};
+$("l").onchange=e=>{const it=e.target.closest(".it");if(!it)return;const id=it.dataset.id,f=D.find(x=>x.id===id),t=e.target;if(!f)return;
+ if(t.classList.contains("sup")){f.s=t.value;put(f);refresh(id)}
+ else if(t.classList.contains("vd")){t.value?f.vu=t.value:delete f.vu;put(f);refresh(id)}
+ else if(t.classList.contains("cm")){const v=t.value.trim();v?f.c=v:delete f.c;put(f)}};
 $("l").onkeydown=e=>{if(e.key==="Enter"&&e.target.classList.contains("it"))e.target.classList.toggle("open")};
+/* ---------- onglets, ce soir, stats ---------- */
+function setView(v){view=v;document.body.dataset.v=v;document.querySelectorAll("#tb button").forEach(b=>b.classList.toggle("on",b.dataset.t===v));
+ $("l").hidden=!(v==="c"||v==="w");$("sv").hidden=v!=="s";$("tv").hidden=v!=="t";$("add").hidden=v==="s"||v==="t";
+ if(v==="t")stats();draw();window.scrollTo(0,0)}
+$("tb").onclick=e=>{const b=e.target.closest("button");if(b)setView(b.dataset.t)};
+let lp=null;
+const bigHTML=f=>`<div class="big">${f.pi?`<img src="${IMG}w342${esc(f.pi)}" alt="">`:""}<div><div class="t">${esc(f.t)}</div><div class="m">${esc([f.r,f.y,fmt(f.d),f.s].filter(Boolean).join(", "))}</div><div class="m">${esc(f.g||"")}</div>${f.ov?`<p class="ov" style="margin-top:8px">${esc(f.ov.length>240?f.ov.slice(0,237)+"…":f.ov)}</p>`:""}</div></div><div class="row"><button id="pw" class="pri" style="flex:1">✓ On le regarde</button><button id="px" style="flex:1">🎲 Un autre</button></div><div class="row"><button id="po" class="z0" style="flex:1">Ouvrir la fiche</button></div>`;
+function pick(){const du=+$("sdu").value,g=$("sgn").value,nv=$("sst").value==="nv";
+ const p=D.filter(x=>!x.wl&&!x.l&&(!nv||!x.vu)&&(!du||(x.d&&x.d<du))&&(!g||x.g.split(" / ").includes(g)));
+ if(!p.length){$("pick").innerHTML='<div class="e">Rien ne correspond : élargis un filtre.</div>';return}
+ let f;do{f=p[Math.floor(Math.random()*p.length)]}while(p.length>1&&f.id===lp);lp=f.id;$("pick").innerHTML=bigHTML(f);
+ if(!f.pi&&!f.eq)enrich(f).then(ok=>{if(ok&&lp===f.id)$("pick").innerHTML=bigHTML(f)})}
+$("dice").onclick=pick;
+$("pick").onclick=e=>{const f=D.find(x=>x.id===lp);if(!f)return;
+ if(e.target.closest("#px"))pick();
+ else if(e.target.closest("#pw")){f.vu=today();put(f);$("pick").innerHTML='<div class="e">Bonne séance ! 🍿<br>« '+esc(f.t)+' » est marqué comme vu.</div>'}
+ else if(e.target.closest("#po")){setView("c");$("q").value=f.t;draw();const c=card(f.id);if(c){c.classList.add("open");c.scrollIntoView()}}};
+function stats(){const C=D.filter(x=>!x.wl),n=C.length;if(!n){$("tv").innerHTML='<div class="e">Ajoute des films pour voir tes stats.</div>';return}
+ const cnt=fn=>{const m={};C.forEach(x=>fn(x).forEach(k=>m[k]=(m[k]||0)+1));return Object.entries(m).sort((a,b)=>b[1]-a[1])};
+ const bars=(t,a)=>a.length?"<h3>"+t+"</h3>"+a.map(([k,v])=>`<div class="br2"><span>${esc(k)}</span><i style="--w:${v/Math.max(...a.map(z=>z[1]))*100}%"></i><b>${v}</b></div>`).join(""):"";
+ const mins=C.reduce((t,x)=>t+(x.d||0),0),vus=C.filter(x=>x.vu).length,nt=C.filter(x=>x.n!==undefined),pr=C.filter(x=>x.l),av=nt.length?(nt.reduce((t,x)=>t+x.n,0)/nt.length).toFixed(1).replace(".",","):"—";
+ const box=(v,l)=>`<div><b>${v}</b><small>${l}</small></div>`;
+ $("tv").innerHTML='<div class="sts">'+box(n,"films")+box(Math.round(mins/60)+" h","de cinéma")+box(vus+" / "+n,"vus")+box(av+" ★","note moyenne")+box(pr.length,"en prêt")+box(D.length-n,"souhaits")+'</div>'
+ +bars("Supports",cnt(x=>[x.s]))+bars("Décennies",cnt(x=>x.y?[dec(x.y)+"s"]:[]).sort((a,b)=>a[0].localeCompare(b[0])))
+ +bars("Genres",cnt(x=>x.g.split(" / ").filter(Boolean)).slice(0,8))
+ +bars("Réalisateurs les plus présents",cnt(x=>sp(x.r)).filter(z=>z[1]>1).slice(0,6))+bars("Acteurs les plus présents",cnt(x=>sp(x.a)).filter(z=>z[1]>1).slice(0,6))
+ +(pr.length?"<h3>En prêt</h3>"+pr.map(x=>`<p class="m">${esc(x.t)} → <b>${esc(x.l.n)}</b> (depuis le ${fd(x.l.d)})</p>`).join(""):"")}
+/* ---------- sauvegarde : rappel + versions de secours ---------- */
+const daysSince=v=>v?(Date.now()-new Date(v))/864e5:999;
+function bkCheck(){const chg=+localStorage.getItem("mt_chg")||0,last=localStorage.getItem("mt_bk"),sn=localStorage.getItem("mt_bks");let first=localStorage.getItem("mt_first");
+ if(!first){try{localStorage.setItem("mt_first",first=new Date().toISOString())}catch(e){}}
+ const on=D.length&&!(sn&&daysSince(sn)<3)&&(chg>=10||(chg>0&&daysSince(last||first)>=14));
+ $("bk").hidden=!on;if(on)$("bkt").textContent=chg+" modification"+(chg>1?"s":"")+" non sauvegardée"+(chg>1?"s":"")}
+$("bkg").onclick=()=>{openSettings();$("ex").click()};
+$("bkx").onclick=()=>{try{localStorage.setItem("mt_bks",new Date().toISOString())}catch(e){}$("bk").hidden=true};
+const sdb=(m,fn)=>db?new Promise((res,rej)=>{const tx=db.transaction("snap",m),r=fn(tx.objectStore("snap"));tx.oncomplete=()=>res(r&&r.result);tx.onerror=tx.onabort=()=>rej(tx.error)}):Promise.resolve([]);
+async function snap(why){if(!D.length)return;try{const all=(await sdb("readonly",x=>x.getAll()))||[];
+ await sdb("readwrite",x=>{x.put({id:Date.now(),why,n:D.length,data:JSON.stringify(D)});all.sort((p,q)=>p.id-q.id).slice(0,Math.max(0,all.length-4)).forEach(z=>x.delete(z.id))})}catch(e){}}
+async function snapUI(){const a=((await sdb("readonly",x=>x.getAll()))||[]).sort((p,q)=>q.id-p.id);
+ $("snl").innerHTML=a.length?a.map(x=>`<div class="row"><span style="flex:1;align-self:center;font-size:13.5px">${esc(new Date(x.id).toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}))} · ${x.n} lignes · ${esc(x.why)}</span><button data-r="${x.id}">Restaurer</button></div>`).join(""):'<span class="hint">Aucune pour l\'instant.</span>'}
+$("snl").onclick=async e=>{const b=e.target.closest("[data-r]");if(!b)return;if(!confirm("Restaurer cette version ? L'état actuel sera gardé en secours."))return;
+ const x=await sdb("readonly",z=>z.get(+b.dataset.r));if(!x)return;await snap("avant restauration");D=JSON.parse(x.data);
+ await idb("readwrite",z=>{z.clear();D.forEach(f=>z.put(f))});lists();draw();snapUI();$("sgs").textContent="Version restaurée : "+D.length+" lignes."};
+$("enb").onclick=async()=>{if(!tkey()){$("sgs").textContent="Il faut une clé TMDB (voir plus haut).";return}
+ const todo=D.filter(x=>!x.pi&&!x.eq);if(!todo.length){$("sgs").textContent="Tout est déjà à jour.";return}
+ let i=0,ok=0;$("enb").disabled=true;
+ const w=async()=>{while(i<todo.length){const f=todo[i++];if(await enrich(f))ok++;$("sgs").textContent="Affiches : "+i+" / "+todo.length+"…"}};
+ await Promise.all([w(),w(),w()]);$("enb").disabled=false;draw();$("sgs").textContent="Terminé : "+ok+" fiches enrichies sur "+todo.length+"."};
 /* ---------- tri / filtres ---------- */
 const lab=()=>($("s").value=="y"||$("s").value=="l"||$("s").value=="n")?(asc?"Croissant":"Décroissant"):(asc?"A → Z":"Z → A");
 $("q").oninput=draw;$("g").onchange=draw;$("s").onchange=()=>{asc=$("s").value!=="n";$("o").textContent=lab();draw()};
 $("o").onclick=()=>{asc=!asc;$("o").textContent=lab();draw()};
 document.querySelectorAll(".chip[data-k]").forEach(b=>b.onclick=()=>{const k=b.dataset.k;sup.has(k)?sup.delete(k):sup.add(k);b.setAttribute("aria-pressed",sup.has(k));draw()});
 $("fb").onclick=()=>{const o=$("pn").hidden;$("pn").hidden=!o;$("fb").setAttribute("aria-expanded",o)};
-["du","dc","nm"].forEach(i=>$(i).onchange=draw);["fr","fa","fpr"].forEach(i=>$(i).oninput=draw);
-$("rz").onclick=()=>{["du","dc","nm","fr","fa","fpr","q","g"].forEach(i=>$(i).value="");sup.clear();nn=false;document.querySelectorAll(".chip[data-k]").forEach(b=>b.setAttribute("aria-pressed","false"));$("v").setAttribute("aria-pressed","false");draw()};
+["du","dc","nm","st"].forEach(i=>$(i).onchange=draw);$("su").onchange=()=>{sup.clear();if($("su").value)sup.add($("su").value);draw()};["fr","fa","fpr"].forEach(i=>$(i).oninput=draw);
+$("rz").onclick=()=>{["du","dc","nm","fr","fa","fpr","q","g","su","st"].forEach(i=>$(i).value="");sup.clear();nn=false;document.querySelectorAll(".chip[data-k]").forEach(b=>b.setAttribute("aria-pressed","false"));$("v").setAttribute("aria-pressed","false");draw()};
 $("v").onclick=()=>{nn=!nn;$("v").setAttribute("aria-pressed",nn);draw()};
 /* ---------- retrait + annulation ---------- */
 let pend=null,undo=null,utm;
-function askDel(id){const x=D.find(f=>f.id===id);if(!x)return;pend=id;$("cp").textContent="« "+x.t+(x.y?" ("+x.y+")":"")+" » sera retiré de ta collection. Tu pourras annuler juste après.";$("cf").hidden=false}
+function askDel(id){const x=D.find(f=>f.id===id);if(!x)return;pend=id;$("cp").textContent="« "+x.t+(x.y?" ("+x.y+")":"")+" » sera retiré de "+(x.wl?"tes souhaits":"ta collection")+". Tu pourras annuler juste après.";$("cf").hidden=false}
 $("cn").onclick=()=>{$("cf").hidden=true;pend=null};
 $("cy").onclick=()=>{$("cf").hidden=true;if(pend)delFilm(pend);pend=null};
 function delFilm(id){const i=D.findIndex(f=>f.id===id);if(i<0)return;const f=D.splice(i,1)[0];
@@ -162,7 +259,8 @@ function delFilm(id){const i=D.findIndex(f=>f.id===id);if(i<0)return;const f=D.s
 $("tu").onclick=()=>{if(!undo)return;const f=undo;undo=null;$("ts").hidden=true;D.push(f);put(f);lists();draw()};
 /* ---------- ajout : titre → TMDB puis Wikidata ; photo → Gemini (titre seulement) ---------- */
 const msg=t=>{$("sm").textContent=t||""};
-function fill(c){$("fT").value=c.titre||"";$("fR").value=c.realisateur||"";$("fY").value=c.annee||"";$("fD").value=c.duree||"";$("fG").value=c.genre||"";$("fA").value=c.acteurs||"";$("fP").value=c.production||"";if(c.support==="DVD"||c.support==="Blu-ray")$("fS").value=c.support}
+let cur={};
+function fill(c){cur={pi:c.affiche||"",ov:c.synopsis||""};$("fT").value=c.titre||"";$("fR").value=c.realisateur||"";$("fY").value=c.annee||"";$("fD").value=c.duree||"";$("fG").value=c.genre||"";$("fA").value=c.acteurs||"";$("fP").value=c.production||"";if(SUP.includes(c.support))$("fS").value=c.support}
 function show(a,src){$("sc").innerHTML="";if(!a.length){msg("Rien trouvé : remplis la fiche à la main.");return}
  const note="Fiche proposée par "+src+" : relis-la avant d'ajouter.";
  if(a.length===1){fill(a[0]);msg(note);return}
@@ -179,7 +277,7 @@ async function tmdb(q,y){const p={query:q,language:"fr-FR",include_adult:"false"
  let res=(await tget("/search/movie",p)).results||[];
  if(!res.length&&y){delete p.year;res=(await tget("/search/movie",p)).results||[]}
  return Promise.all(res.slice(0,3).map(async m=>{const d=await tget("/movie/"+m.id,{language:"fr-FR",append_to_response:"credits"}),cr=d.credits||{};
-  return{titre:d.title||m.title,realisateur:(cr.crew||[]).filter(x=>x.job==="Director").map(x=>x.name).join(", "),duree:d.runtime||"",genre:(d.genres||[]).slice(0,3).map(x=>x.name).join(" / "),annee:(d.release_date||"").slice(0,4),acteurs:(cr.cast||[]).slice(0,5).map(x=>x.name).join(", "),production:(d.production_companies||[]).slice(0,3).map(x=>x.name).join(", ")||"—"}}))}
+  return{titre:d.title||m.title,realisateur:(cr.crew||[]).filter(x=>x.job==="Director").map(x=>x.name).join(", "),duree:d.runtime||"",genre:(d.genres||[]).slice(0,3).map(x=>x.name).join(" / "),annee:(d.release_date||"").slice(0,4),acteurs:(cr.cast||[]).slice(0,5).map(x=>x.name).join(", "),production:(d.production_companies||[]).slice(0,3).map(x=>x.name).join(", ")||"—",affiche:d.poster_path||"",synopsis:d.overview||""}}))}
 /* Wikidata (sans clé, relais) */
 async function wget(p){const u=new URL("https://www.wikidata.org/w/api.php");Object.entries(Object.assign({format:"json",origin:"*"},p)).forEach(([a,b])=>u.searchParams.set(a,b));
  const r=await fetch(u);if(!r.ok)throw new Error("Wikidata "+r.status);return r.json()}
@@ -221,7 +319,7 @@ const b64=b=>new Promise((a,r)=>{const f=new FileReader();f.onload=()=>a(String(
 async function shrink(file){const u=URL.createObjectURL(file);const im=new Image();await new Promise((a,b)=>{im.onload=a;im.onerror=b;im.src=u});
  const k=Math.min(1,1280/Math.max(im.width,im.height));const c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
  c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);return new Promise(r=>c.toBlob(r,"image/jpeg",.82))}
-$("add").onclick=()=>{$("ad").hidden=false;msg("");$("sc").innerHTML="";["fT","fR","fY","fD","fG","fA","fP","sq"].forEach(i=>$(i).value="");$("fS").value="DVD"};
+$("add").onclick=()=>{cur={};$("ad").querySelector("h2").textContent=view==="w"?"Ajouter un souhait":"Ajouter un film";$("fok").textContent=view==="w"?"Ajouter à mes souhaits":"Ajouter à ma collection";$("ad").hidden=false;msg("");$("sc").innerHTML="";["fT","fR","fY","fD","fG","fA","fP","sq"].forEach(i=>$(i).value="");$("fS").value="DVD"};
 $("ax").onclick=()=>{$("ad").hidden=true};
 $("cam").onclick=()=>{if(!localStorage.getItem(KEY)){openSettings("Pour scanner une jaquette, colle d'abord ta clé Gemini (gratuite). Sinon, cherche par titre.");return}$("ph").click()};
 $("ph").onchange=async()=>{const f=$("ph").files[0];$("ph").value="";if(!f)return;
@@ -232,10 +330,10 @@ $("fok").onclick=()=>{const t=$("fT").value.trim();if(!t){msg("Il faut au moins 
  const n=v=>{const k=parseInt(v,10);return k>0?k:""};
  const y=n($("fY").value),id=mkid(t,y);
  if(D.some(x=>x.id===id)){msg("Ce film est déjà dans ta collection.");return}
- const f={id,t,r:$("fR").value.trim(),y,d:n($("fD").value),g:$("fG").value.trim(),a:$("fA").value.trim(),s:$("fS").value,p:$("fP").value.trim(),v:1};
+ const f={id,t,r:$("fR").value.trim(),y,d:n($("fD").value),g:$("fG").value.trim(),a:$("fA").value.trim(),s:$("fS").value,p:$("fP").value.trim(),v:1};if(view==="w")f.wl=1;if(cur.pi)f.pi=cur.pi;if(cur.ov)f.ov=cur.ov;
  D.push(f);put(f);lists();$("ad").hidden=true;$("q").value=t;draw();const c=card(id);if(c)c.classList.add("open")};
 /* ---------- réglages, export / import CSV ---------- */
-function openSettings(m){$("sg").hidden=false;$("kk").value=localStorage.getItem(KEY)||"";$("km").value=localStorage.getItem(MOD)||"";$("km").placeholder="Modèle (défaut : "+DEF_MOD+")";$("sgs").textContent=m||"";$("km2").textContent=localStorage.getItem(KEY)?"Clé enregistrée sur cet appareil.":"";$("tk").value=localStorage.getItem(TK)||"";$("tk2").textContent=localStorage.getItem(TK)?"Clé TMDB enregistrée sur cet appareil.":(TMDB_DEFAULT?"Une clé TMDB est déjà fournie avec l'appli : rien à faire.":"Pas de clé TMDB : la recherche passe par Wikidata.");if(m)$("kk").focus()}
+function openSettings(m){$("sg").hidden=false;snapUI();$("kk").value=localStorage.getItem(KEY)||"";$("km").value=localStorage.getItem(MOD)||"";$("km").placeholder="Modèle (défaut : "+DEF_MOD+")";$("sgs").textContent=m||"";$("km2").textContent=localStorage.getItem(KEY)?"Clé enregistrée sur cet appareil.":"";$("tk").value=localStorage.getItem(TK)||"";$("tk2").textContent=localStorage.getItem(TK)?"Clé TMDB enregistrée sur cet appareil.":(TMDB_DEFAULT?"Une clé TMDB est déjà fournie avec l'appli : rien à faire.":"Pas de clé TMDB : la recherche passe par Wikidata.");if(m)$("kk").focus()}
 $("gear").onclick=()=>openSettings();
 $("gx").onclick=()=>{$("sg").hidden=true};
 $("ks").onclick=()=>{const k=$("kk").value.trim(),m=$("km").value.trim();
@@ -247,14 +345,14 @@ $("tks").onclick=()=>{const k=$("tk").value.trim();
 $("sh").onclick=async()=>{const url=location.origin+location.pathname.replace(/index\.html$/,""),txt="Ma médiathèque : catalogue tes DVD/Blu-ray, gratuit et sans compte. Ouvre le lien dans Safari, puis Partager → « Sur l'écran d'accueil ».";
  try{if(navigator.share){await navigator.share({title:"Ma médiathèque",text:txt,url});return}}catch(e){if(e&&e.name==="AbortError")return}
  try{await navigator.clipboard.writeText(txt+" "+url);$("sgs").textContent="Lien copié : colle-le dans un message."}catch(e){$("sgs").textContent="Lien à envoyer : "+url}};
-const COLS=["Titre","Réalisateur","Durée (min)","Genre","Année de sortie","Acteurs principaux","Support","Maison de production","Note"];
+const COLS=["Titre","Réalisateur","Durée (min)","Genre","Année de sortie","Acteurs principaux","Support","Maison de production","Note","Vu le","Prêté à","Prêté le","Commentaire","Liste","Affiche","Synopsis"];
 const cell=v=>{v=String(v===undefined||v===null?"":v);return /[;"\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
 async function out(name,text){const blob=new Blob(["\uFEFF"+text],{type:"text/csv;charset=utf-8"});const file=new File([blob],name,{type:"text/csv"});
- try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});return}}catch(e){if(e&&e.name==="AbortError")return}
- const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
-$("ex").onclick=()=>{if(!D.length){$("sgs").textContent="Rien à exporter pour l'instant.";return}
- const rows=[...D].sort((a,b)=>key(a.t).localeCompare(key(b.t),"fr")).map(x=>[x.t,x.r,x.d,x.g,x.y,x.a,x.s,x.p,x.n===undefined?"":String(x.n).replace(".",",")].map(cell).join(";"));
- out("mediatheque_"+new Date().toISOString().slice(0,10)+".csv",[COLS.map(cell).join(";"),...rows].join("\r\n"));$("sgs").textContent=D.length+" films exportés."};
+ try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});return true}}catch(e){if(e&&e.name==="AbortError")return false}
+ const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);return true}
+$("ex").onclick=async()=>{if(!D.length){$("sgs").textContent="Rien à exporter pour l'instant.";return}
+ const rows=[...D].sort((a,b)=>key(a.t).localeCompare(key(b.t),"fr")).map(x=>[x.t,x.r,x.d,x.g,x.y,x.a,x.s,x.p,x.n===undefined?"":String(x.n).replace(".",","),x.vu||"",x.l?x.l.n:"",x.l?x.l.d:"",x.c||"",x.wl?"souhait":"",x.pi||"",x.ov||""].map(cell).join(";"));
+ if(await out("mediatheque_"+new Date().toISOString().slice(0,10)+".csv",[COLS.map(cell).join(";"),...rows].join("\r\n"))){try{localStorage.setItem("mt_bk",new Date().toISOString());localStorage.setItem("mt_chg","0")}catch(e){}$("sgs").textContent=D.length+" lignes exportées.";bkCheck()}};
 function parseCSV(t){t=t.replace(/^\uFEFF/,"");const first=t.split(/\r?\n/)[0],dl=(first.match(/;/g)||[]).length>=(first.match(/,/g)||[]).length?";":",";
  const rows=[];let r=[],c="",q=false;
  for(let i=0;i<t.length;i++){const ch=t[i];
@@ -268,24 +366,25 @@ const pi=v=>{const k=parseInt(v,10);return k>0?k:""};
 const cl=v=>{v=String(v||"").trim();return v==="—"||v==="-"?"":v};
 $("im").onclick=()=>$("imf").click();
 $("imf").onchange=async()=>{const file=$("imf").files[0];$("imf").value="";if(!file)return;
- try{const rows=parseCSV(await file.text());if(rows.length<2)throw 0;
+ try{const rows=parseCSV(await file.text());if(rows.length<2)throw 0;await snap("avant import");
   const H=rows[0].map(hk),ix=p=>H.findIndex(h=>p.some(q=>h===q||h.startsWith(q)));
-  const I={t:ix(["titre"]),r:ix(["realisateur"]),d:ix(["duree"]),g:ix(["genre"]),y:ix(["annee"]),a:ix(["acteurs"]),s:ix(["support"]),p:ix(["maisondeproduction","production"]),n:ix(["note"])};
+  const I={t:ix(["titre"]),r:ix(["realisateur"]),d:ix(["duree"]),g:ix(["genre"]),y:ix(["annee"]),a:ix(["acteurs"]),s:ix(["support"]),p:ix(["maisondeproduction","production"]),n:ix(["note"]),vu:ix(["vule"]),lo:ix(["pretea"]),ld:ix(["pretele"]),c:ix(["commentaire"]),wl:ix(["liste"]),po:ix(["affiche"]),ov:ix(["synopsis"])};
   if(I.t<0)throw 0;
   const g=(r,k)=>I[k]<0?"":(r[I[k]]||"");const byId=new Map(D.map(x=>[x.id,x]));const seen={};let add=0,upd=0;const batch=[];
   rows.slice(1).forEach(r=>{const t=cl(g(r,"t"));if(!t)return;const y=pi(g(r,"y"));let id=mkid(t,y);seen[id]=(seen[id]||0)+1;if(seen[id]>1)id+="|"+seen[id];
-   const f={id,t,r:cl(g(r,"r")),d:pi(g(r,"d")),g:cl(g(r,"g")),y,a:cl(g(r,"a")),s:/blu/i.test(g(r,"s"))?"Blu-ray":"DVD",p:cl(g(r,"p"))};
+   const f={id,t,r:cl(g(r,"r")),d:pi(g(r,"d")),g:cl(g(r,"g")),y,a:cl(g(r,"a")),s:supOf(g(r,"s")),p:cl(g(r,"p"))};{const vu=cl(g(r,"vu")),lo=cl(g(r,"lo")),ld=cl(g(r,"ld")),cm=g(r,"c").trim(),po=cl(g(r,"po")),ov=g(r,"ov").trim();if(vu)f.vu=vu;if(lo)f.l={n:lo,d:ld||today()};if(cm)f.c=cm;if(/souhait/i.test(g(r,"wl")))f.wl=1;if(po)f.pi=po;if(ov)f.ov=ov}
    const n=pn(g(r,"n")),old=byId.get(id);
    if(old){if(n===undefined&&old.n!==undefined)f.n=old.n;if(old.v)f.v=old.v;Object.assign(old,f);if(n!==undefined)old.n=n;batch.push(old);upd++}
    else{if(n!==undefined)f.n=n;D.push(f);byId.set(id,f);batch.push(f);add++}});
   await putMany(batch);lists();draw();$("sgs").textContent="Import terminé : "+add+" ajouté"+(add>1?"s":"")+", "+upd+" mis à jour."}
  catch(e){$("sgs").textContent="Fichier illisible : il faut un CSV avec au moins une colonne « Titre »."}};
-$("clr").onclick=async()=>{if(!D.length)return;if(!confirm("Vider toute la collection de cet appareil ? Pense à exporter un CSV avant."))return;
+$("clr").onclick=async()=>{if(!D.length)return;if(!confirm("Vider toute la collection de cet appareil ? Une version de secours sera gardée."))return;await snap("avant vidage");
  D=[];await idb("readwrite",s=>{s.clear()}).catch(()=>{});lists();draw();$("sgs").textContent="Collection vidée."};
 /* ---------- démarrage ---------- */
 (async()=>{
  try{db=await openDB()}catch(e){db=null;$("n").textContent="Stockage indisponible"}
  try{D=(await idb("readonly",s=>s.getAll()))||[]}catch(e){D=[]}
  try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
- lists();draw()})();
+ lists();draw();try{const a=(await sdb("readonly",z=>z.getAll()))||[];if(D.length&&(!a.length||Date.now()-Math.max(...a.map(z=>z.id))>864e5))snap("auto")}catch(e){}})();
+if("serviceWorker"in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script></body></html>
