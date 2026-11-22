@@ -78,17 +78,23 @@ input:focus,select:focus{outline:none;border-color:var(--gold)}
 <div class="gr"><input id="fT" class="w2" placeholder="Titre"><input id="fR" placeholder="Réalisateur"><input id="fY" inputmode="numeric" placeholder="Année"><input id="fD" inputmode="numeric" placeholder="Durée (min)"><select id="fS"><option>DVD</option><option>Blu-ray</option></select><input id="fG" class="w2" placeholder="Genre (ex. Comédie / Action)"><input id="fA" class="w2" placeholder="Acteurs principaux"><input id="fP" class="w2" placeholder="Maison de production"></div>
 <div class="row"><button id="fok" class="pri" style="flex:1">Ajouter à ma collection</button></div></div></div>
 <div id="sg" hidden role="dialog" aria-modal="true" aria-label="Réglages"><div class="sh"><div class="hd"><h2>Réglages</h2><button id="gx">Fermer</button></div>
-<p class="hint"><b>Scan de jaquettes (optionnel)</b><br>Clé gratuite Google Gemini (aistudio.google.com). Elle reste sur cet appareil, jamais dans le code. Sans clé, tu ajoutes tes films à la main.</p>
+<p class="hint"><b>Recherche de films</b><br>Ça marche déjà sans rien configurer (Wikidata). Pour des fiches plus complètes, ajoute une clé TMDB gratuite : <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener" style="color:var(--gold)">créer ma clé</a> (compte gratuit, puis « Clé API »).</p>
+<div class="row"><input id="tk" type="password" placeholder="Clé TMDB (optionnel)" autocomplete="off" autocapitalize="off" spellcheck="false"><button id="tks" class="pri">Enregistrer</button></div>
+<div id="tk2" class="hint"></div>
+<p class="hint" style="margin-top:16px"><b>Scan de jaquettes (optionnel)</b><br>Clé gratuite Google Gemini (aistudio.google.com). Elle sert seulement à lire le titre sur la photo ; la fiche vient ensuite de TMDB/Wikidata. Sans clé, cherche par titre.</p>
 <div class="row"><input id="kk" type="password" placeholder="Colle ta clé API ici" autocomplete="off" autocapitalize="off" spellcheck="false"><button id="ks" class="pri">Enregistrer</button></div>
 <div class="row"><input id="km" placeholder="Modèle Gemini" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
 <div id="km2" class="hint"></div>
+<p class="hint" style="margin-top:16px"><b>Partager</b><br>Envoie l'appli à tes potes : ils l'ouvrent, l'ajoutent à l'écran d'accueil, et c'est parti.</p>
+<div class="row"><button id="sh" class="pri" style="flex:1">Partager l'appli</button></div>
 <p class="hint" style="margin-top:16px"><b>Sauvegarde</b><br>Ta collection vit dans la mémoire de ce navigateur : exporte un CSV de temps en temps.</p>
 <div class="row"><button id="ex" style="flex:1">Exporter en CSV</button><button id="im" style="flex:1">Importer un CSV</button></div><input id="imf" type="file" accept=".csv,text/csv,text/plain,.txt" hidden>
 <p id="sgs" class="hint"></p>
+<p class="hint" style="font-size:12px">Données : TMDB (ce produit utilise l'API TMDB mais n'est ni approuvé ni certifié par TMDB) et Wikidata (CC0).</p>
 <button id="clr" class="z0" style="width:100%;margin-top:6px">Vider la collection</button></div></div>
 <script>
 const $=i=>document.getElementById(i);
-const KEY="mt_gemini_key",MOD="mt_gemini_model",DEF_MOD="gemini-flash-latest";
+const KEY="mt_gemini_key",MOD="mt_gemini_model",DEF_MOD="gemini-flash-lite-latest";
 let D=[],db=null,asc=true,sup=new Set(),nn=false,G=[];
 /* ---------- IndexedDB (base créée vierge au premier lancement) ---------- */
 const idb=(m,fn)=>db?new Promise((res,rej)=>{const tx=db.transaction("films",m),r=fn(tx.objectStore("films"));tx.oncomplete=()=>res(r&&r.result);tx.onerror=tx.onabort=()=>rej(tx.error)}):Promise.resolve([]);
@@ -154,37 +160,73 @@ function delFilm(id){const i=D.findIndex(f=>f.id===id);if(i<0)return;const f=D.s
  idb("readwrite",s=>{s.delete(id)}).catch(()=>{});
  undo=f;$("tt").textContent="« "+f.t+" » retiré";$("ts").hidden=false;clearTimeout(utm);utm=setTimeout(()=>{$("ts").hidden=true;undo=null},8000);lists();draw()}
 $("tu").onclick=()=>{if(!undo)return;const f=undo;undo=null;$("ts").hidden=true;D.push(f);put(f);lists();draw()};
-/* ---------- ajout (manuel ou scan Gemini) ---------- */
+/* ---------- ajout : titre → TMDB puis Wikidata ; photo → Gemini (titre seulement) ---------- */
 const msg=t=>{$("sm").textContent=t||""};
 function fill(c){$("fT").value=c.titre||"";$("fR").value=c.realisateur||"";$("fY").value=c.annee||"";$("fD").value=c.duree||"";$("fG").value=c.genre||"";$("fA").value=c.acteurs||"";$("fP").value=c.production||"";if(c.support==="DVD"||c.support==="Blu-ray")$("fS").value=c.support}
-function show(a){$("sc").innerHTML="";if(!a.length){msg("Rien trouvé : remplis la fiche à la main.");return}
- if(a.length===1){fill(a[0]);msg("Fiche proposée de mémoire : relis-la avant d'ajouter.");return}
+function show(a,src){$("sc").innerHTML="";if(!a.length){msg("Rien trouvé : remplis la fiche à la main.");return}
+ const note="Fiche proposée par "+src+" : relis-la avant d'ajouter.";
+ if(a.length===1){fill(a[0]);msg(note);return}
  msg("Plusieurs possibilités, touche la bonne :");
- a.forEach(c=>{const b=document.createElement("button");b.className="cd";b.textContent=(c.titre||"?")+(c.annee?" ("+c.annee+")":"")+(c.realisateur?" · "+c.realisateur:"");b.onclick=()=>{fill(c);$("sc").innerHTML="";msg("Fiche proposée de mémoire : relis-la avant d'ajouter.")};$("sc").append(b)})}
-const FMT='{"candidats":[{"titre":"titre français officiel","realisateur":"noms séparés par \', \'","duree":minutes (entier, version cinéma),"genre":"1 à 3 genres français séparés par \' / \'","annee":année de sortie (entier),"acteurs":"3 à 5 acteurs principaux séparés par \', \'","production":"sociétés de production principales séparées par \', \' ou \'—\' si inconnu","support":"DVD ou Blu-ray si visible sur la photo, sinon \'\'"}]}';
-const b64=b=>new Promise((a,r)=>{const f=new FileReader();f.onload=()=>a(String(f.result).split(",")[1]);f.onerror=r;f.readAsDataURL(b)});
-async function ask(p,blob){const k=localStorage.getItem(KEY);if(!k){openSettings("Pour scanner ou chercher, colle d'abord ta clé Gemini (gratuite).");return}
- msg("Recherche en cours…");$("sc").innerHTML="";
- try{const parts=[{text:p+"\nGenres déjà utilisés (réutilise-les si possible) : "+G.join(", ")+"\nRéponds uniquement en JSON sur ce modèle : "+FMT+"\nDonne 1 à 3 candidats, du plus probable au moins probable. N'invente rien : si tu hésites sur un champ, mets \"\" (ou 0 pour duree et annee)."}];
-  if(blob)parts.unshift({inline_data:{mime_type:"image/jpeg",data:await b64(blob)}});
-  const mod=localStorage.getItem(MOD)||DEF_MOD;
-  const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(mod)+":generateContent?key="+encodeURIComponent(k),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts}],generationConfig:{responseMimeType:"application/json",temperature:.2,maxOutputTokens:4096}})});
-  if(!r.ok){let d="";try{const e=await r.json();d=(e.error&&e.error.message)||""}catch(_){}msg("Erreur Google ("+r.status+") : "+d.slice(0,180));return}
+ a.forEach(c=>{const b=document.createElement("button");b.className="cd";b.textContent=(c.titre||"?")+(c.annee?" ("+c.annee+")":"")+(c.realisateur?" · "+c.realisateur:"");b.onclick=()=>{fill(c);$("sc").innerHTML="";msg(note)};$("sc").append(b)})}
+/* TMDB (clé perso dans les réglages, sinon clé fournie avec l'appli) */
+const TK="mt_tmdb_key",TMDB_DEFAULT="998fbe5699ca57fcca16a6165db2a8fa";/* ← colle ici TA clé TMDB : tes amis n'auront rien à faire */
+const tkey=()=>(localStorage.getItem(TK)||TMDB_DEFAULT||"").trim();
+async function tget(path,p){const k=tkey(),u=new URL("https://api.themoviedb.org/3"+path),h={};
+ Object.entries(p||{}).forEach(([a,b])=>u.searchParams.set(a,b));
+ if(k.length>40)h.Authorization="Bearer "+k;else u.searchParams.set("api_key",k);
+ const r=await fetch(u,{headers:h});if(!r.ok)throw new Error("TMDB "+r.status);return r.json()}
+async function tmdb(q,y){const p={query:q,language:"fr-FR",include_adult:"false"};if(y)p.year=y;
+ let res=(await tget("/search/movie",p)).results||[];
+ if(!res.length&&y){delete p.year;res=(await tget("/search/movie",p)).results||[]}
+ return Promise.all(res.slice(0,3).map(async m=>{const d=await tget("/movie/"+m.id,{language:"fr-FR",append_to_response:"credits"}),cr=d.credits||{};
+  return{titre:d.title||m.title,realisateur:(cr.crew||[]).filter(x=>x.job==="Director").map(x=>x.name).join(", "),duree:d.runtime||"",genre:(d.genres||[]).slice(0,3).map(x=>x.name).join(" / "),annee:(d.release_date||"").slice(0,4),acteurs:(cr.cast||[]).slice(0,5).map(x=>x.name).join(", "),production:(d.production_companies||[]).slice(0,3).map(x=>x.name).join(", ")||"—"}}))}
+/* Wikidata (sans clé, relais) */
+async function wget(p){const u=new URL("https://www.wikidata.org/w/api.php");Object.entries(Object.assign({format:"json",origin:"*"},p)).forEach(([a,b])=>u.searchParams.set(a,b));
+ const r=await fetch(u);if(!r.ok)throw new Error("Wikidata "+r.status);return r.json()}
+async function wiki(q,y){const s=(await wget({action:"wbsearchentities",search:q,language:"fr",uselang:"fr",type:"item",limit:10})).search||[];
+ let hit=s.filter(x=>/film|long.m[ée]trage|t[ée]l[ée]film/i.test(x.description||""));
+ if(y){const w=hit.filter(x=>String(x.description||"").includes(y));if(w.length)hit=w}
+ const ids=hit.slice(0,3).map(x=>x.id);if(!ids.length)return[];
+ const E=(await wget({action:"wbgetentities",ids:ids.join("|"),props:"claims|labels",languages:"fr|en"})).entities||{};
+ const val=(c,p)=>(c[p]||[]).map(z=>z.mainsnak&&z.mainsnak.datavalue&&z.mainsnak.datavalue.value).filter(Boolean);
+ const qid=(c,p,n)=>val(c,p).filter(v=>v.id).slice(0,n).map(v=>v.id);
+ const need=new Set(),rows=ids.map(id=>{const e=E[id],c=e.claims||{},r={e,dir:qid(c,"P57",3),gen:qid(c,"P136",3),act:qid(c,"P161",5),prod:qid(c,"P272",3)};
+  [...r.dir,...r.gen,...r.act,...r.prod].forEach(i=>need.add(i));return r});
+ const L={};if(need.size){const l=(await wget({action:"wbgetentities",ids:[...need].slice(0,50).join("|"),props:"labels",languages:"fr|en"})).entities||{};
+  for(const k in l){const lb=l[k].labels||{};L[k]=(lb.fr||lb.en||{}).value||""}}
+ const nm=a=>a.map(i=>L[i]).filter(Boolean);
+ return rows.map(r=>{const c=r.e.claims||{},lb=r.e.labels||{},t=val(c,"P577")[0],du=val(c,"P2047")[0];
+  let min="";if(du&&du.amount){const u=du.unit||"",a=parseFloat(du.amount);min=Math.round(/Q25235$/.test(u)?a*60:/Q11574$/.test(u)?a/60:a)}
+  return{titre:(lb.fr||lb.en||{}).value||q,realisateur:nm(r.dir).join(", "),duree:min,genre:nm(r.gen).join(" / "),annee:t&&t.time?(t.time.match(/\d{4}/)||[""])[0]:"",acteurs:nm(r.act).join(", "),production:nm(r.prod).join(", ")||"—"}})}
+async function find(q,y){msg("Recherche en cours…");$("sc").innerHTML="";let a=[],src="";
+ if(tkey()){try{a=await tmdb(q,y);src="TMDB"}catch(e){a=[]}}
+ if(!a.length){try{a=await wiki(q,y);src="Wikidata"}catch(e){msg(navigator.onLine?"Recherche impossible pour l'instant : remplis la fiche à la main.":"Pas de connexion : remplis la fiche à la main.");return}}
+ show(a,src)}
+/* Scan photo : Gemini ne renvoie que le titre (1 petit appel), la fiche vient de TMDB/Wikidata */
+async function scan(blob){const k=localStorage.getItem(KEY);if(!k){openSettings("Pour scanner une jaquette, colle d'abord ta clé Gemini (gratuite). Sinon, cherche par titre.");return}
+ msg("Lecture de la jaquette…");$("sc").innerHTML="";
+ try{const mod=localStorage.getItem(MOD)||DEF_MOD,txt="Voici la photo d'une jaquette de DVD ou Blu-ray. Lis le titre du film. Réponds uniquement en JSON : {\"titre\":\"titre lu sur la jaquette\",\"annee\":année si visible sinon 0,\"support\":\"DVD ou Blu-ray si visible, sinon vide\"}";
+  const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(mod)+":generateContent?key="+encodeURIComponent(k),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:[{inline_data:{mime_type:"image/jpeg",data:await b64(blob)}},{text:txt}]}],generationConfig:{responseMimeType:"application/json",temperature:0,maxOutputTokens:1024}})});
+  if(!r.ok){let d="";try{const e=await r.json();d=(e.error&&e.error.message)||""}catch(_){}
+   msg(r.status===429?"Quota Google épuisé pour l'instant : tape le titre dans la recherche (ça ne consomme rien).":"Erreur Google ("+r.status+") : "+d.slice(0,120)+" — tu peux chercher par titre.");return}
   const j=await r.json(),c=(j.candidates||[])[0];
-  if(!c){msg("Google n'a rien renvoyé"+(j.promptFeedback&&j.promptFeedback.blockReason?" ("+j.promptFeedback.blockReason+")":"")+".");return}
-  let t=((c.content||{}).parts||[]).filter(p=>!p.thought).map(p=>p.text||"").join("").replace(/```json|```/g,"").trim(),o;
-  try{o=JSON.parse(t)}catch(_){const i=t.search(/[\[{]/),e=Math.max(t.lastIndexOf("}"),t.lastIndexOf("]"));try{o=JSON.parse(t.slice(i,e+1))}catch(__){msg("Réponse illisible ("+(c.finishReason||"?")+") : "+t.slice(0,120));return}}
-  show(Array.isArray(o)?o:(o&&o.candidats)||[])}
+  let t=c?((c.content||{}).parts||[]).filter(p=>!p.thought).map(p=>p.text||"").join("").replace(/```json|```/g,"").trim():"",o;
+  try{o=JSON.parse(t)}catch(_){const i=t.indexOf("{"),e=t.lastIndexOf("}");try{o=JSON.parse(t.slice(i,e+1))}catch(__){o=null}}
+  if(Array.isArray(o))o=o[0];
+  if(!o||!o.titre){msg("Titre illisible sur la photo : tape-le dans la recherche.");return}
+  $("sq").value=o.titre;await find(o.titre,parseInt(o.annee,10)||"");
+  if(o.support==="DVD"||o.support==="Blu-ray")$("fS").value=o.support}
  catch(e){msg(navigator.onLine?"Échec : "+((e&&e.message)||e):"Pas de connexion : remplis la fiche à la main.")}}
+const b64=b=>new Promise((a,r)=>{const f=new FileReader();f.onload=()=>a(String(f.result).split(",")[1]);f.onerror=r;f.readAsDataURL(b)});
 async function shrink(file){const u=URL.createObjectURL(file);const im=new Image();await new Promise((a,b)=>{im.onload=a;im.onerror=b;im.src=u});
  const k=Math.min(1,1280/Math.max(im.width,im.height));const c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
  c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);return new Promise(r=>c.toBlob(r,"image/jpeg",.82))}
 $("add").onclick=()=>{$("ad").hidden=false;msg("");$("sc").innerHTML="";["fT","fR","fY","fD","fG","fA","fP","sq"].forEach(i=>$(i).value="");$("fS").value="DVD"};
 $("ax").onclick=()=>{$("ad").hidden=true};
-$("cam").onclick=()=>{if(!localStorage.getItem(KEY)){openSettings("Pour scanner une jaquette, colle d'abord ta clé Gemini (gratuite).");return}$("ph").click()};
+$("cam").onclick=()=>{if(!localStorage.getItem(KEY)){openSettings("Pour scanner une jaquette, colle d'abord ta clé Gemini (gratuite). Sinon, cherche par titre.");return}$("ph").click()};
 $("ph").onchange=async()=>{const f=$("ph").files[0];$("ph").value="";if(!f)return;
- try{const b=await shrink(f);await ask("Voici la photo d'une jaquette de DVD ou Blu-ray. Lis le titre sur la jaquette et identifie le film.",b)}catch(e){msg("Photo illisible : réessaie ou cherche par titre.")}};
-$("sb").onclick=()=>{const q=$("sq").value.trim();if(q)ask("Identifie le film dont le titre est approximativement : « "+q+" ».")};
+ try{const b=await shrink(f);await scan(b)}catch(e){msg("Photo illisible : réessaie ou cherche par titre.")}};
+$("sb").onclick=()=>{const q=$("sq").value.trim();if(q)find(q)};
 $("sq").onkeydown=e=>{if(e.key==="Enter")$("sb").click()};
 $("fok").onclick=()=>{const t=$("fT").value.trim();if(!t){msg("Il faut au moins un titre.");return}
  const n=v=>{const k=parseInt(v,10);return k>0?k:""};
@@ -193,12 +235,18 @@ $("fok").onclick=()=>{const t=$("fT").value.trim();if(!t){msg("Il faut au moins 
  const f={id,t,r:$("fR").value.trim(),y,d:n($("fD").value),g:$("fG").value.trim(),a:$("fA").value.trim(),s:$("fS").value,p:$("fP").value.trim(),v:1};
  D.push(f);put(f);lists();$("ad").hidden=true;$("q").value=t;draw();const c=card(id);if(c)c.classList.add("open")};
 /* ---------- réglages, export / import CSV ---------- */
-function openSettings(m){$("sg").hidden=false;$("kk").value=localStorage.getItem(KEY)||"";$("km").value=localStorage.getItem(MOD)||"";$("km").placeholder="Modèle (défaut : "+DEF_MOD+")";$("sgs").textContent=m||"";$("km2").textContent=localStorage.getItem(KEY)?"Clé enregistrée sur cet appareil.":"";if(m)$("kk").focus()}
+function openSettings(m){$("sg").hidden=false;$("kk").value=localStorage.getItem(KEY)||"";$("km").value=localStorage.getItem(MOD)||"";$("km").placeholder="Modèle (défaut : "+DEF_MOD+")";$("sgs").textContent=m||"";$("km2").textContent=localStorage.getItem(KEY)?"Clé enregistrée sur cet appareil.":"";$("tk").value=localStorage.getItem(TK)||"";$("tk2").textContent=localStorage.getItem(TK)?"Clé TMDB enregistrée sur cet appareil.":(TMDB_DEFAULT?"Une clé TMDB est déjà fournie avec l'appli : rien à faire.":"Pas de clé TMDB : la recherche passe par Wikidata.");if(m)$("kk").focus()}
 $("gear").onclick=()=>openSettings();
 $("gx").onclick=()=>{$("sg").hidden=true};
 $("ks").onclick=()=>{const k=$("kk").value.trim(),m=$("km").value.trim();
  try{k?localStorage.setItem(KEY,k):localStorage.removeItem(KEY);m?localStorage.setItem(MOD,m):localStorage.removeItem(MOD)}catch(e){$("sgs").textContent="Impossible d'enregistrer sur cet appareil.";return}
  $("sgs").textContent=k?"Clé enregistrée.":"Clé retirée.";$("km2").textContent=k?"Clé enregistrée sur cet appareil.":""};
+$("tks").onclick=()=>{const k=$("tk").value.trim();
+ try{k?localStorage.setItem(TK,k):localStorage.removeItem(TK)}catch(e){$("sgs").textContent="Impossible d'enregistrer sur cet appareil.";return}
+ $("sgs").textContent=k?"Clé TMDB enregistrée.":"Clé TMDB retirée.";$("tk2").textContent=k?"Clé TMDB enregistrée sur cet appareil.":(TMDB_DEFAULT?"Une clé TMDB est déjà fournie avec l'appli : rien à faire.":"Pas de clé TMDB : la recherche passe par Wikidata.")};
+$("sh").onclick=async()=>{const url=location.origin+location.pathname.replace(/index\.html$/,""),txt="Ma médiathèque : catalogue tes DVD/Blu-ray, gratuit et sans compte. Ouvre le lien dans Safari, puis Partager → « Sur l'écran d'accueil ».";
+ try{if(navigator.share){await navigator.share({title:"Ma médiathèque",text:txt,url});return}}catch(e){if(e&&e.name==="AbortError")return}
+ try{await navigator.clipboard.writeText(txt+" "+url);$("sgs").textContent="Lien copié : colle-le dans un message."}catch(e){$("sgs").textContent="Lien à envoyer : "+url}};
 const COLS=["Titre","Réalisateur","Durée (min)","Genre","Année de sortie","Acteurs principaux","Support","Maison de production","Note"];
 const cell=v=>{v=String(v===undefined||v===null?"":v);return /[;"\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
 async function out(name,text){const blob=new Blob(["\uFEFF"+text],{type:"text/csv;charset=utf-8"});const file=new File([blob],name,{type:"text/csv"});
