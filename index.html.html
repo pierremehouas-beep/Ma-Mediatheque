@@ -1,0 +1,225 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Médiathèque"><title>Ma médiathèque</title>
+<style>
+:root{--bg:#eceff3;--card:#fff;--ink:#161a22;--mut:#5d6675;--line:#d5dae2;--dvd:#3b4250;--br:#1b6fe0;--warn:#c98a00;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0f1217;--card:#181d25;--ink:#e9ecf1;--mut:#99a2b1;--line:#2a313c;--dvd:#7b8597;--br:#5aa2ff;--warn:#e2b13c;color-scheme:dark}}
+:root[data-theme=dark]{--bg:#0f1217;--card:#181d25;--ink:#e9ecf1;--mut:#99a2b1;--line:#2a313c;--dvd:#7b8597;--br:#5aa2ff;--warn:#e2b13c;color-scheme:dark}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 -apple-system,system-ui,"Segoe UI",sans-serif}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:10}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding:10px 12px 8px;border-bottom:1px solid var(--line)}
+h1{font:700 22px/1.1 "Iowan Old Style",Georgia,serif;margin:0 0 8px}
+h1 small{font:400 13px -apple-system,system-ui,sans-serif;color:var(--mut);margin-left:8px}
+input,select,button{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 10px;min-height:40px}
+#q{width:100%}
+.row{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}.row select{flex:1;min-width:0}
+.chip{border-radius:999px;padding:6px 12px;min-height:34px}.chip[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+main{padding:10px 12px 30px;max-width:720px;margin:0 auto}
+.it{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-left:6px solid var(--dvd);border-radius:6px;padding:10px 12px;margin:0 0 8px}
+.it.br{border-left-color:var(--br)}
+.t{font:600 17px/1.25 "Iowan Old Style",Georgia,serif}
+.m{color:var(--mut);font-size:13.5px;margin-top:2px}
+.d{display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:14px}.it.open .d{display:block}
+.d p{margin:3px 0}.d b{font-weight:600}.d a{color:var(--br)}
+.w{color:var(--warn);font-weight:600}
+.e{text-align:center;color:var(--mut);padding:40px 0}
+.top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}.nt{color:var(--warn);font-weight:600;white-space:nowrap;font-size:14px}
+.it{cursor:pointer}.it:focus-visible{outline:2px solid var(--br);outline-offset:2px}
+.rt{display:flex;align-items:center;flex-wrap:wrap;gap:2px;margin-top:8px}
+.st{position:relative;display:inline-block;width:36px;height:36px;font-size:32px;line-height:36px;text-align:center}
+.st i{font-style:normal;position:absolute;inset:0}.st .bg{color:var(--line)}.st .fg{color:var(--warn)}
+.st b{position:absolute;top:0;bottom:0;width:50%}.st b:first-of-type{left:0}.st b:last-of-type{right:0}
+.z{padding:4px 10px;min-height:34px;margin-left:6px;font-size:13px;color:var(--mut)}
+#pn{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}#pn[hidden]{display:none}#pn input,#pn select{width:100%;min-width:0}.z0{grid-column:1/-1;color:var(--mut)}
+.chip[aria-expanded=true]{border-color:var(--ink)}
+#pn input,#pn select,#q,#ad input,#ad select,#sg input{font-size:16px}
+#add{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));width:56px;height:56px;border-radius:50%;background:var(--ink);color:var(--bg);font-size:32px;line-height:1;padding:0;z-index:6;border:0;box-shadow:0 2px 10px rgba(0,0,0,.3)}
+#ad,#cf,#sg{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.45);display:flex;align-items:flex-end}#ad[hidden],#cf[hidden],#sg[hidden]{display:none}
+.sh{background:var(--bg);width:100%;max-width:720px;margin:0 auto;max-height:92%;overflow:auto;border-radius:16px 16px 0 0;padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px))}
+.sh h2{font:700 20px/1.1 "Iowan Old Style",Georgia,serif;margin:0}.sh .hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.sh .row input{flex:1;min-width:0}.gr{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}.gr .w2{grid-column:1/-1}.gr input,.gr select{width:100%;min-width:0}
+.pri{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:600}
+#sm{color:var(--mut);font-size:14px;margin:8px 0}.cd{display:block;width:100%;text-align:left;margin-top:6px}
+#cp{margin:8px 0 12px;color:var(--mut)}.bad{background:#c0392b;color:#fff;border-color:#c0392b;font-weight:600}
+#ts{position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom,0px));max-width:480px;margin:0 auto;background:var(--ink);color:var(--bg);border-radius:10px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:10px;z-index:30}#ts[hidden]{display:none}
+#ts button{background:transparent;color:var(--bg);border:0;font-weight:700;min-height:0;padding:4px 8px}
+h1{display:flex;align-items:baseline}#gear{margin-left:auto;align-self:center;min-height:34px;padding:2px 12px;font-size:20px;line-height:1}
+.hint{color:var(--mut);font-size:14px;margin:8px 0}#sg .row input{flex:1;min-width:0}.e b{color:var(--ink)}
+
+</style></head><body>
+<header><h1>Ma médiathèque<small id="n"></small><button id="gear" aria-label="Réglages">⚙︎</button></h1>
+<input id="q" type="search" placeholder="Titre, réalisateur, acteur ou production" autocomplete="off">
+<div class="row"><select id="s" aria-label="Trier par"><option value="t">Titre</option><option value="r">Réalisateur</option><option value="y">Année</option><option value="l">Durée</option><option value="g">Genre</option><option value="n">Note</option></select><button id="o" aria-label="Sens du tri">A → Z</button></div>
+<div class="row"><select id="g" aria-label="Genre"><option value="">Tous les genres</option></select><button class="chip" data-k="DVD" aria-pressed="false">DVD</button><button class="chip" data-k="Blu-ray" aria-pressed="false">Blu-ray</button><button class="chip" id="v" aria-pressed="false">Non notés</button><button class="chip" id="fb" aria-expanded="false" aria-controls="pn">Filtres</button></div>
+<div id="pn" hidden><select id="du" aria-label="Tranche de durée"><option value="">Toutes les durées</option></select><select id="dc" aria-label="Décennie"><option value="">Toutes les années</option></select><select id="nm" aria-label="Note minimale"><option value="">Toutes les notes</option><option value="3">3 ★ et plus</option><option value="3.5">3½ ★ et plus</option><option value="4">4 ★ et plus</option><option value="4.5">4½ ★ et plus</option><option value="5">5 ★</option></select><input id="fr" list="lr" placeholder="Réalisateur" autocomplete="off"><input id="fa" list="la" placeholder="Acteur" autocomplete="off"><input id="fpr" list="lp" placeholder="Maison de production" autocomplete="off"><button id="rz" class="z0">Tout réinitialiser</button><datalist id="lr"></datalist><datalist id="la"></datalist><datalist id="lp"></datalist></div></header>
+<main id="l"></main>
+<button id="add" aria-label="Ajouter un film">+</button>
+<div id="cf" hidden role="alertdialog" aria-modal="true" aria-label="Confirmer le retrait"><div class="sh"><h2>Retirer ce film ?</h2><p id="cp"></p><div class="row"><button id="cn" style="flex:1">Annuler</button><button id="cy" class="bad" style="flex:1">Retirer</button></div></div></div>
+<div id="ts" hidden><span id="tt"></span><button id="tu">Annuler</button></div>
+<div id="ad" hidden role="dialog" aria-modal="true" aria-label="Ajouter un film"><div class="sh"><div class="hd"><h2>Ajouter un film</h2><button id="ax">Fermer</button></div>
+<div class="row"><button id="cam" class="pri" style="flex:1">📷 Photographier la jaquette</button></div><input id="ph" type="file" accept="image/*" capture="environment" hidden>
+<div class="row"><input id="sq" type="search" placeholder="Ou cherche par titre" autocomplete="off"><button id="sb">Chercher</button></div>
+<div id="sm"></div><div id="sc"></div>
+<div class="gr"><input id="fT" class="w2" placeholder="Titre"><input id="fR" placeholder="Réalisateur"><input id="fY" inputmode="numeric" placeholder="Année"><input id="fD" inputmode="numeric" placeholder="Durée (min)"><select id="fS"><option>DVD</option><option>Blu-ray</option></select><input id="fG" class="w2" placeholder="Genre (ex. Comédie / Action)"><input id="fA" class="w2" placeholder="Acteurs principaux"><input id="fP" class="w2" placeholder="Maison de production"></div>
+<div class="row"><button id="fok" class="pri" style="flex:1">Ajouter à ma collection</button></div></div></div>
+<div id="sg" hidden role="dialog" aria-modal="true" aria-label="Réglages"><div class="sh"><div class="hd"><h2>Réglages</h2><button id="gx">Fermer</button></div>
+<p class="hint"><b>Scan de jaquettes (optionnel)</b><br>Clé gratuite Google Gemini (aistudio.google.com). Elle reste sur cet appareil, jamais dans le code. Sans clé, tu ajoutes tes films à la main.</p>
+<div class="row"><input id="kk" type="password" placeholder="Colle ta clé API ici" autocomplete="off" autocapitalize="off" spellcheck="false"><button id="ks" class="pri">Enregistrer</button></div>
+<div class="row"><input id="km" placeholder="Modèle Gemini" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+<div id="km2" class="hint"></div>
+<p class="hint" style="margin-top:16px"><b>Sauvegarde</b><br>Ta collection vit dans la mémoire de ce navigateur : exporte un CSV de temps en temps.</p>
+<div class="row"><button id="ex" style="flex:1">Exporter en CSV</button><button id="im" style="flex:1">Importer un CSV</button></div><input id="imf" type="file" accept=".csv,text/csv,text/plain,.txt" hidden>
+<p id="sgs" class="hint"></p>
+<button id="clr" class="z0" style="width:100%;margin-top:6px">Vider la collection</button></div></div>
+<script>
+const $=i=>document.getElementById(i);
+const KEY="mt_gemini_key",MOD="mt_gemini_model",DEF_MOD="gemini-flash-latest";
+let D=[],db=null,asc=true,sup=new Set(),nn=false,G=[];
+/* ---------- IndexedDB (base créée vierge au premier lancement) ---------- */
+const idb=(m,fn)=>db?new Promise((res,rej)=>{const tx=db.transaction("films",m),r=fn(tx.objectStore("films"));tx.oncomplete=()=>res(r&&r.result);tx.onerror=tx.onabort=()=>rej(tx.error)}):Promise.resolve([]);
+const openDB=()=>new Promise((res,rej)=>{const q=indexedDB.open("mediatheque",1);q.onupgradeneeded=()=>{q.result.createObjectStore("films",{keyPath:"id"})};q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)});
+const put=f=>idb("readwrite",s=>{s.put(f)}).catch(()=>{});
+const putMany=a=>idb("readwrite",s=>{a.forEach(f=>s.put(f))}).catch(()=>{});
+/* ---------- utilitaires ---------- */
+const key=s=>String(s||"").toLowerCase().replace(/^(le |la |les |l['’]|un |une |the )/,"").normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+const sk=s=>key(s).replace(/[^a-z0-9]+/g," ").trim();
+const fmt=m=>m?Math.floor(m/60)+"h"+String(m%60).padStart(2,"0"):"";
+const nl=v=>v===undefined?"":(v===0?"0":(Math.floor(v)||"")+(v%1?"½":"")) +" ★";
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const opt=(sel,v,t)=>{const o=document.createElement("option");o.value=v;o.textContent=t===undefined?v:t;sel.append(o)};
+const yurl=t=>"https://www.allocine.fr/rechercher/?q="+encodeURIComponent(t).replace(/%20/g,"+");
+const TR=["0h – 1h29","1h30 – 1h59","2h – 2h29","2h30 – 2h59","3h et +"];
+const tr=m=>m===""?"Non renseignée":m<90?TR[0]:m<120?TR[1]:m<150?TR[2]:m<180?TR[3]:TR[4];
+const dec=y=>y===""?"":Math.floor(y/10)*10;
+const sp=v=>String(v||"").split(", ").map(t=>t.trim()).filter(t=>t&&t!=="—");
+const uniq=f=>[...new Set(D.flatMap(f))].sort((a,b)=>a.localeCompare(b,"fr"));
+const mkid=(t,y)=>t+"|"+(y||"");
+[...TR,"Non renseignée"].forEach(t=>opt($("du"),t));
+function lists(){G=[...new Set(D.flatMap(x=>x.g.split(" / ").filter(Boolean)))].sort((a,b)=>a.localeCompare(b,"fr"));
+ const gv=$("g").value,dv=$("dc").value;
+ $("g").innerHTML='<option value="">Tous les genres</option>';G.forEach(g=>opt($("g"),g));$("g").value=gv;
+ $("dc").innerHTML='<option value="">Toutes les années</option>';[...new Set(D.map(x=>dec(x.y)).filter(Boolean))].sort((a,b)=>a-b).forEach(d=>opt($("dc"),d,"Années "+d));$("dc").value=dv;
+ [["lr",x=>sp(x.r)],["la",x=>sp(x.a)],["lp",x=>sp(x.p)]].forEach(([id,f])=>{$(id).innerHTML="";uniq(f).forEach(v=>opt($(id),v))})}
+const cmp={t:x=>key(x.t),r:x=>key(x.r),y:x=>x.y,l:x=>x.d,g:x=>key(x.g),n:x=>x.n===undefined?"":x.n};
+const rt=v=>{v=v||0;let h="";for(let i=1;i<=5;i++){const d=Math.max(0,Math.min(1,v-(i-1)));h+=`<span class="st"><i class="bg">★</i><i class="fg" style="clip-path:inset(0 ${100-d*100}% 0 0)">★</i><b data-v="${i-.5}"></b><b data-v="${i}"></b></span>`}return h+'<button class="z" data-v="0">0</button><button class="z" data-v="">Effacer</button>'};
+const count=()=>{const k=D.filter(x=>x.n!==undefined).length;return k?" · "+k+" noté"+(k>1?"s":""):""};
+const card=id=>[...$("l").children].find(c=>c.dataset.id===id);
+function draw(){
+ const q=sk($("q").value.trim()),g=$("g").value,s=$("s").value,f=cmp[s],du=$("du").value,dc=$("dc").value,nm=$("nm").value,fr=key($("fr").value.trim()),fa=key($("fa").value.trim()),fp=key($("fpr").value.trim());
+ let r=D.filter(x=>(!q||sk(x.t+" "+x.r+" "+x.a+" "+x.p).includes(q))&&(!g||x.g.split(" / ").includes(g))&&(!sup.size||sup.has(x.s))&&(!nn||x.n===undefined)&&(!du||tr(x.d)===du)&&(!dc||String(dec(x.y))===dc)&&(!nm||x.n>=+nm)&&(!fr||key(x.r).includes(fr))&&(!fa||key(x.a).includes(fa))&&(!fp||key(x.p).includes(fp)));
+ r.sort((a,b)=>{let p=f(a),c=f(b);if(p===""&&c!=="")return 1;if(c===""&&p!=="")return -1;const z=typeof p==="number"?p-c:String(p).localeCompare(String(c),"fr");return (asc?z:-z)||key(a.t).localeCompare(key(b.t),"fr")});
+ const na=[du,dc,nm,fr,fa,fp].filter(Boolean).length;$("fb").textContent=na?"Filtres ("+na+")":"Filtres";
+ $("n").textContent=D.length?r.length+" film"+(r.length>1?"s":"")+" sur "+D.length+count():"";
+ $("l").innerHTML=!D.length?'<div class="e">Ta médiathèque est vide.<br>Appuie sur <b>+</b> pour ajouter un film,<br>ou sur ⚙︎ pour importer un CSV.</div>':r.length?r.map(x=>`<div class="it ${x.s=="Blu-ray"?"br":""}" data-id="${esc(x.id)}" tabindex="0"><div class="top"><div class="t">${esc(x.t)}</div><span class="nt">${nl(x.n)}</span></div><div class="m">${esc([x.r,x.y,fmt(x.d),x.s].filter(Boolean).join(", "))}</div><div class="d"><p><b>Genre :</b> ${esc(x.g||"à compléter")}</p><p><b>Avec :</b> ${esc(x.a||"à compléter")}</p><p><b>Production :</b> ${esc(x.p||"à compléter")}</p><p><a href="${esc(yurl(x.t))}" target="_blank" rel="noopener">Voir sur Allociné</a> · <a href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent("jaquette "+x.s+" "+x.t+(x.y?" "+x.y:""))}" target="_blank" rel="noopener">Voir la jaquette</a></p>${x.v?'<p class="w">Ajouté depuis l\'appli : infos à vérifier</p>':""}<button class="z0 del">Retirer de la collection</button><div class="rt">${rt(x.n)}</div></div></div>`).join(""):'<div class="e">Aucun film ne correspond.</div>';
+}
+/* ---------- notes ---------- */
+function rate(id,v){const f=D.find(x=>x.id===id);if(!f)return;if(v===""||f.n===+v)delete f.n;else f.n=+v;put(f);
+ const c=card(id);if(c){c.querySelector(".rt").innerHTML=rt(f.n);c.querySelector(".nt").textContent=nl(f.n)}
+ $("n").textContent=$("n").textContent.replace(/ · \d+ notés?$/,"")+count()}
+$("l").onclick=e=>{const it=e.target.closest(".it");if(!it)return;const id=it.dataset.id;
+ if(e.target.closest(".del")){askDel(id);return}
+ const h=e.target.closest("[data-v]");if(h){rate(id,h.dataset.v);return}
+ if(e.target.closest("a,.rt"))return;it.classList.toggle("open")};
+$("l").onkeydown=e=>{if(e.key==="Enter"&&e.target.classList.contains("it"))e.target.classList.toggle("open")};
+/* ---------- tri / filtres ---------- */
+const lab=()=>($("s").value=="y"||$("s").value=="l"||$("s").value=="n")?(asc?"Croissant":"Décroissant"):(asc?"A → Z":"Z → A");
+$("q").oninput=draw;$("g").onchange=draw;$("s").onchange=()=>{asc=$("s").value!=="n";$("o").textContent=lab();draw()};
+$("o").onclick=()=>{asc=!asc;$("o").textContent=lab();draw()};
+document.querySelectorAll(".chip[data-k]").forEach(b=>b.onclick=()=>{const k=b.dataset.k;sup.has(k)?sup.delete(k):sup.add(k);b.setAttribute("aria-pressed",sup.has(k));draw()});
+$("fb").onclick=()=>{const o=$("pn").hidden;$("pn").hidden=!o;$("fb").setAttribute("aria-expanded",o)};
+["du","dc","nm"].forEach(i=>$(i).onchange=draw);["fr","fa","fpr"].forEach(i=>$(i).oninput=draw);
+$("rz").onclick=()=>{["du","dc","nm","fr","fa","fpr","q","g"].forEach(i=>$(i).value="");sup.clear();nn=false;document.querySelectorAll(".chip[data-k]").forEach(b=>b.setAttribute("aria-pressed","false"));$("v").setAttribute("aria-pressed","false");draw()};
+$("v").onclick=()=>{nn=!nn;$("v").setAttribute("aria-pressed",nn);draw()};
+/* ---------- retrait + annulation ---------- */
+let pend=null,undo=null,utm;
+function askDel(id){const x=D.find(f=>f.id===id);if(!x)return;pend=id;$("cp").textContent="« "+x.t+(x.y?" ("+x.y+")":"")+" » sera retiré de ta collection. Tu pourras annuler juste après.";$("cf").hidden=false}
+$("cn").onclick=()=>{$("cf").hidden=true;pend=null};
+$("cy").onclick=()=>{$("cf").hidden=true;if(pend)delFilm(pend);pend=null};
+function delFilm(id){const i=D.findIndex(f=>f.id===id);if(i<0)return;const f=D.splice(i,1)[0];
+ idb("readwrite",s=>{s.delete(id)}).catch(()=>{});
+ undo=f;$("tt").textContent="« "+f.t+" » retiré";$("ts").hidden=false;clearTimeout(utm);utm=setTimeout(()=>{$("ts").hidden=true;undo=null},8000);lists();draw()}
+$("tu").onclick=()=>{if(!undo)return;const f=undo;undo=null;$("ts").hidden=true;D.push(f);put(f);lists();draw()};
+/* ---------- ajout (manuel ou scan Gemini) ---------- */
+const msg=t=>{$("sm").textContent=t||""};
+function fill(c){$("fT").value=c.titre||"";$("fR").value=c.realisateur||"";$("fY").value=c.annee||"";$("fD").value=c.duree||"";$("fG").value=c.genre||"";$("fA").value=c.acteurs||"";$("fP").value=c.production||"";if(c.support==="DVD"||c.support==="Blu-ray")$("fS").value=c.support}
+function show(a){$("sc").innerHTML="";if(!a.length){msg("Rien trouvé : remplis la fiche à la main.");return}
+ if(a.length===1){fill(a[0]);msg("Fiche proposée de mémoire : relis-la avant d'ajouter.");return}
+ msg("Plusieurs possibilités, touche la bonne :");
+ a.forEach(c=>{const b=document.createElement("button");b.className="cd";b.textContent=(c.titre||"?")+(c.annee?" ("+c.annee+")":"")+(c.realisateur?" · "+c.realisateur:"");b.onclick=()=>{fill(c);$("sc").innerHTML="";msg("Fiche proposée de mémoire : relis-la avant d'ajouter.")};$("sc").append(b)})}
+const FMT='{"candidats":[{"titre":"titre français officiel","realisateur":"noms séparés par \', \'","duree":minutes (entier, version cinéma),"genre":"1 à 3 genres français séparés par \' / \'","annee":année de sortie (entier),"acteurs":"3 à 5 acteurs principaux séparés par \', \'","production":"sociétés de production principales séparées par \', \' ou \'—\' si inconnu","support":"DVD ou Blu-ray si visible sur la photo, sinon \'\'"}]}';
+const b64=b=>new Promise((a,r)=>{const f=new FileReader();f.onload=()=>a(String(f.result).split(",")[1]);f.onerror=r;f.readAsDataURL(b)});
+async function ask(p,blob){const k=localStorage.getItem(KEY);if(!k){openSettings("Pour scanner ou chercher, colle d'abord ta clé Gemini (gratuite).");return}
+ msg("Recherche en cours…");$("sc").innerHTML="";
+ try{const parts=[{text:p+"\nGenres déjà utilisés (réutilise-les si possible) : "+G.join(", ")+"\nRéponds uniquement en JSON sur ce modèle : "+FMT+"\nDonne 1 à 3 candidats, du plus probable au moins probable. N'invente rien : si tu hésites sur un champ, mets \"\" (ou 0 pour duree et annee)."}];
+  if(blob)parts.unshift({inline_data:{mime_type:"image/jpeg",data:await b64(blob)}});
+  const mod=localStorage.getItem(MOD)||DEF_MOD;
+  const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(mod)+":generateContent?key="+encodeURIComponent(k),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts}],generationConfig:{responseMimeType:"application/json",temperature:.2}})});
+  if(!r.ok){msg(r.status===400||r.status===403?"Clé refusée par Google : vérifie-la dans les réglages ⚙︎.":r.status===429?"Quota gratuit atteint : réessaie dans un moment.":"Recherche impossible (erreur "+r.status+") : remplis la fiche à la main.");return}
+  const j=await r.json();let t=((((j.candidates||[])[0]||{}).content||{}).parts||[]).map(p=>p.text||"").join("");
+  t=t.replace(/```json|```/g,"").trim();const o=JSON.parse(t);show(Array.isArray(o)?o:(o&&o.candidats)||[])}
+ catch(e){msg(navigator.onLine?"Recherche impossible pour l'instant : remplis la fiche à la main.":"Pas de connexion : remplis la fiche à la main.")}}
+async function shrink(file){const u=URL.createObjectURL(file);const im=new Image();await new Promise((a,b)=>{im.onload=a;im.onerror=b;im.src=u});
+ const k=Math.min(1,1280/Math.max(im.width,im.height));const c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
+ c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);return new Promise(r=>c.toBlob(r,"image/jpeg",.82))}
+$("add").onclick=()=>{$("ad").hidden=false;msg("");$("sc").innerHTML="";["fT","fR","fY","fD","fG","fA","fP","sq"].forEach(i=>$(i).value="");$("fS").value="DVD"};
+$("ax").onclick=()=>{$("ad").hidden=true};
+$("cam").onclick=()=>{if(!localStorage.getItem(KEY)){openSettings("Pour scanner une jaquette, colle d'abord ta clé Gemini (gratuite).");return}$("ph").click()};
+$("ph").onchange=async()=>{const f=$("ph").files[0];$("ph").value="";if(!f)return;
+ try{const b=await shrink(f);await ask("Voici la photo d'une jaquette de DVD ou Blu-ray. Lis le titre sur la jaquette et identifie le film.",b)}catch(e){msg("Photo illisible : réessaie ou cherche par titre.")}};
+$("sb").onclick=()=>{const q=$("sq").value.trim();if(q)ask("Identifie le film dont le titre est approximativement : « "+q+" ».")};
+$("sq").onkeydown=e=>{if(e.key==="Enter")$("sb").click()};
+$("fok").onclick=()=>{const t=$("fT").value.trim();if(!t){msg("Il faut au moins un titre.");return}
+ const n=v=>{const k=parseInt(v,10);return k>0?k:""};
+ const y=n($("fY").value),id=mkid(t,y);
+ if(D.some(x=>x.id===id)){msg("Ce film est déjà dans ta collection.");return}
+ const f={id,t,r:$("fR").value.trim(),y,d:n($("fD").value),g:$("fG").value.trim(),a:$("fA").value.trim(),s:$("fS").value,p:$("fP").value.trim(),v:1};
+ D.push(f);put(f);lists();$("ad").hidden=true;$("q").value=t;draw();const c=card(id);if(c)c.classList.add("open")};
+/* ---------- réglages, export / import CSV ---------- */
+function openSettings(m){$("sg").hidden=false;$("kk").value=localStorage.getItem(KEY)||"";$("km").value=localStorage.getItem(MOD)||"";$("km").placeholder="Modèle (défaut : "+DEF_MOD+")";$("sgs").textContent=m||"";$("km2").textContent=localStorage.getItem(KEY)?"Clé enregistrée sur cet appareil.":"";if(m)$("kk").focus()}
+$("gear").onclick=()=>openSettings();
+$("gx").onclick=()=>{$("sg").hidden=true};
+$("ks").onclick=()=>{const k=$("kk").value.trim(),m=$("km").value.trim();
+ try{k?localStorage.setItem(KEY,k):localStorage.removeItem(KEY);m?localStorage.setItem(MOD,m):localStorage.removeItem(MOD)}catch(e){$("sgs").textContent="Impossible d'enregistrer sur cet appareil.";return}
+ $("sgs").textContent=k?"Clé enregistrée.":"Clé retirée.";$("km2").textContent=k?"Clé enregistrée sur cet appareil.":""};
+const COLS=["Titre","Réalisateur","Durée (min)","Genre","Année de sortie","Acteurs principaux","Support","Maison de production","Note"];
+const cell=v=>{v=String(v===undefined||v===null?"":v);return /[;"\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+async function out(name,text){const blob=new Blob(["\uFEFF"+text],{type:"text/csv;charset=utf-8"});const file=new File([blob],name,{type:"text/csv"});
+ try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});return}}catch(e){if(e&&e.name==="AbortError")return}
+ const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
+$("ex").onclick=()=>{if(!D.length){$("sgs").textContent="Rien à exporter pour l'instant.";return}
+ const rows=[...D].sort((a,b)=>key(a.t).localeCompare(key(b.t),"fr")).map(x=>[x.t,x.r,x.d,x.g,x.y,x.a,x.s,x.p,x.n===undefined?"":String(x.n).replace(".",",")].map(cell).join(";"));
+ out("mediatheque_"+new Date().toISOString().slice(0,10)+".csv",[COLS.map(cell).join(";"),...rows].join("\r\n"));$("sgs").textContent=D.length+" films exportés."};
+function parseCSV(t){t=t.replace(/^\uFEFF/,"");const first=t.split(/\r?\n/)[0],dl=(first.match(/;/g)||[]).length>=(first.match(/,/g)||[]).length?";":",";
+ const rows=[];let r=[],c="",q=false;
+ for(let i=0;i<t.length;i++){const ch=t[i];
+  if(q){if(ch==='"'){if(t[i+1]==='"'){c+='"';i++}else q=false}else c+=ch}
+  else if(ch==='"')q=true;else if(ch===dl){r.push(c);c=""}
+  else if(ch==="\n"||ch==="\r"){if(ch==="\r"&&t[i+1]==="\n")i++;r.push(c);c="";rows.push(r);r=[]}else c+=ch}
+ if(c!==""||r.length){r.push(c);rows.push(r)}return rows.filter(x=>x.some(v=>v.trim()))}
+const hk=s=>key(s).replace(/[^a-z0-9]/g,"");
+const pn=v=>{v=String(v||"").trim().replace("½",".5").replace("★","").replace(",",".").trim();if(!v)return undefined;const n=parseFloat(v);return isNaN(n)?undefined:Math.max(0,Math.min(5,Math.round(n*2)/2))};
+const pi=v=>{const k=parseInt(v,10);return k>0?k:""};
+const cl=v=>{v=String(v||"").trim();return v==="—"||v==="-"?"":v};
+$("im").onclick=()=>$("imf").click();
+$("imf").onchange=async()=>{const file=$("imf").files[0];$("imf").value="";if(!file)return;
+ try{const rows=parseCSV(await file.text());if(rows.length<2)throw 0;
+  const H=rows[0].map(hk),ix=p=>H.findIndex(h=>p.some(q=>h===q||h.startsWith(q)));
+  const I={t:ix(["titre"]),r:ix(["realisateur"]),d:ix(["duree"]),g:ix(["genre"]),y:ix(["annee"]),a:ix(["acteurs"]),s:ix(["support"]),p:ix(["maisondeproduction","production"]),n:ix(["note"])};
+  if(I.t<0)throw 0;
+  const g=(r,k)=>I[k]<0?"":(r[I[k]]||"");const byId=new Map(D.map(x=>[x.id,x]));const seen={};let add=0,upd=0;const batch=[];
+  rows.slice(1).forEach(r=>{const t=cl(g(r,"t"));if(!t)return;const y=pi(g(r,"y"));let id=mkid(t,y);seen[id]=(seen[id]||0)+1;if(seen[id]>1)id+="|"+seen[id];
+   const f={id,t,r:cl(g(r,"r")),d:pi(g(r,"d")),g:cl(g(r,"g")),y,a:cl(g(r,"a")),s:/blu/i.test(g(r,"s"))?"Blu-ray":"DVD",p:cl(g(r,"p"))};
+   const n=pn(g(r,"n")),old=byId.get(id);
+   if(old){if(n===undefined&&old.n!==undefined)f.n=old.n;if(old.v)f.v=old.v;Object.assign(old,f);if(n!==undefined)old.n=n;batch.push(old);upd++}
+   else{if(n!==undefined)f.n=n;D.push(f);byId.set(id,f);batch.push(f);add++}});
+  await putMany(batch);lists();draw();$("sgs").textContent="Import terminé : "+add+" ajouté"+(add>1?"s":"")+", "+upd+" mis à jour."}
+ catch(e){$("sgs").textContent="Fichier illisible : il faut un CSV avec au moins une colonne « Titre »."}};
+$("clr").onclick=async()=>{if(!D.length)return;if(!confirm("Vider toute la collection de cet appareil ? Pense à exporter un CSV avant."))return;
+ D=[];await idb("readwrite",s=>{s.clear()}).catch(()=>{});lists();draw();$("sgs").textContent="Collection vidée."};
+/* ---------- démarrage ---------- */
+(async()=>{
+ try{db=await openDB()}catch(e){db=null;$("n").textContent="Stockage indisponible"}
+ try{D=(await idb("readonly",s=>s.getAll()))||[]}catch(e){D=[]}
+ try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+ try{const c=document.createElement("canvas");c.width=c.height=180;const x=c.getContext("2d");x.fillStyle="#161a22";x.fillRect(0,0,180,180);x.font="96px serif";x.textAlign="center";x.textBaseline="middle";x.fillText("🎬",90,98);const l=document.createElement("link");l.rel="apple-touch-icon";l.href=c.toDataURL("image/png");document.head.append(l)}catch(e){}
+ lists();draw()})();
+</script></body></html>
