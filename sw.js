@@ -1,5 +1,5 @@
 /* My Mediatheque — cache limité à cette application */
-const CACHE = "my-mediatheque-v3";
+const CACHE = "my-mediatheque-v4";
 const APP_SHELL = ["./", "./index.html", "./style.css", "./app.js"];
 
 self.addEventListener("install", event => {

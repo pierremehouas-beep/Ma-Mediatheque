@@ -131,3 +131,14 @@ body[data-view=s] header>:not(h1):not(#ty),body[data-view=t] header>:not(h1):not
 .tl{margin:0 0 10px}.tlh{margin:10px 0 2px;font-weight:600;color:var(--gold)}.tk{display:flex;gap:10px;padding:3px 0;border-bottom:1px solid var(--line2);line-height:1.35}.tk:last-child{border-bottom:0}.tk span{flex:0 0 1.8em;text-align:right;color:var(--mut);font-variant-numeric:tabular-nums}
 /* Ce soir : pas de réalisateur/acteur pour la musique */
 body[data-t=m] .clear-wrap:has(#sdir),body[data-t=m] .clear-wrap:has(#sact),body[data-t=m] #sdir,body[data-t=m] #sact{display:none}
+
+/* --- v-livres : flèche « remonter » au-dessus de la barre du bas, onglet Livres, couleurs des types --- */
+#l{padding-bottom:12px}
+.upw{padding:0 12px calc(120px + env(safe-area-inset-bottom,0px))}
+#ty button:not(.th){flex:1 1 auto}
+@media (max-width:390px){#ty{gap:4px}#ty button{font-size:12.5px}}
+@media (max-width:340px){#ty button{font-size:11.5px}}
+#instr[hidden]{display:none}
+body[data-t=b] .clear-wrap:has(#sdir),body[data-t=b] .clear-wrap:has(#sact),body[data-t=b] #sdir,body[data-t=b] #sact{display:none}
+.it.ro{border-left-color:#d4a017;--fc:#d4a017}.it.bd{border-left-color:#ff7043;--fc:#ff7043}.it.mg{border-left-color:#e91e63;--fc:#e91e63}.it.cx{border-left-color:#3d8bfd;--fc:#3d8bfd}
+.it.je{border-left-color:#43a047;--fc:#43a047}.it.es{border-left-color:#26a69a;--fc:#26a69a}.it.au{border-left-color:#9aa3cc;--fc:#9aa3cc}
