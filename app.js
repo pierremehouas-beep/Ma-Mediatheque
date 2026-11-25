@@ -35,7 +35,7 @@ const sortGroup=(x,k)=>k==="l"?(x.d?tr(x.d):(x.k==="b"?"Pages non renseignées":
 const rt=v=>{v=v||0;let h="";for(let i=1;i<=5;i++){const d=Math.max(0,Math.min(1,v-(i-1)));h+=`<span class="st"><i class="bg">★</i><i class="fg" style="clip-path:inset(0 ${100-d*100}% 0 0)">★</i><b data-v="${i-.5}"></b><b data-v="${i}"></b></span>`}return '<button class="z" data-v="0" style="margin-left:0;margin-right:4px">0</button>'+h+'<button class="z" data-v="">Effacer</button>'};
 const count=()=>{const k=D.filter(x=>isT(x)&&x.n!==undefined).length;return k?" · "+k+" noté"+(k>1?"s":""):""};
 const card=id=>[...$("l").children].find(c=>c.dataset.id===id);
-let view="c",typ="f";
+let view="c",typ="f",grid=false;try{grid=localStorage.getItem("mt_grid")==="1"}catch(e){}
 const isT=x=>(x.k||"f")===typ,own=x=>x.seasonsOwned?x.seasonsOwned.length:(x.ownedSeasons!==undefined?x.ownedSeasons:(x.ns||0)),seen=x=>x.k==="s"?(own(x)>0&&(x.sw||0)>=own(x)):!!x.vu,prog=x=>x.k==="s"&&(x.sw||0)>0&&!seen(x);
 const SUPF=["DVD","Blu-ray","4K UHD","Fichier numérique"],SUPM=["Vinyle","CD","K7","MP3"],SUPB=["Roman","BD","Manga","Comics","Jeunesse","Essai","Autre"];let SUP=SUPF;const SC={"Vinyle":"vi","CD":"cd","K7":"k7","MP3":"fn","Blu-ray":"br","4K UHD":"uh","Fichier numérique":"fn","Roman":"ro","BD":"bd","Manga":"mg","Comics":"cx","Jeunesse":"je","Essai":"es","Autre":"au"},IMG="https://image.tmdb.org/t/p/";
 const pimg=(p,w)=>p.startsWith("gb:")?"https://books.google.com/books/content?id="+p.slice(3)+"&printsec=frontcover&img=1&zoom=1":p.startsWith("ol:")?"https://covers.openlibrary.org/b/id/"+p.slice(3)+(w==="w154"?"-M":"-L")+".jpg":p.startsWith("mb:")?"https://coverartarchive.org/release-group/"+p.slice(3)+"/front-250":IMG+w+p;
@@ -45,7 +45,7 @@ const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOStr
 const tlHTML=ov=>{let n=0,h='<div class="tl">';String(ov).split(/\r?\n/).map(s=>s.trim()).filter(Boolean).forEach(s=>{if(s.startsWith("## ")){n=0;h+='<div class="tlh">'+esc(s.slice(3))+'</div>'}else{n++;h+='<div class="tk"><span>'+n+'.</span><div>'+esc(s.replace(/^\d+[.)]\s+/,""))+'</div></div>'}});return h+"</div>"};
 function rowHTML(x,open){
  const S=x.k==="s",M=x.k==="m",B=x.k==="b",sw=x.sw||0,ow=S?own(x):0;const vup=S?'<span class="sp">Saisons vues</span><button class="z sdn">−</button><b>'+sw+' / '+(x.ns||ow?ow:"?")+'</b><button class="z sin">+</button>'+(ow&&sw<ow?'<button class="z sall">Tout vu</button>':""):(x.vu?'<label class="vl">'+(M?"Écouté le":B?"Lu le":"Vu le")+' <input type="date" class="vd" value="'+esc(x.vu)+'"></label><button class="z vub">'+(M?"Pas écouté":B?"Pas lu":"Pas vu")+'</button>':'<button class="pri vub">'+(M?"✓ Marquer comme écouté":B?"✓ Marquer comme lu":"✓ Marquer comme vu")+'</button>');const acts=x.wl?'<button class="pri own">✓ Je l\'ai ! Ajouter à ma collection</button>':(x.l?'<span class="w">Prêté à '+esc(x.l.n)+' depuis le '+fd(x.l.d)+'</span><button class="z lnb">Rendu</button>':'<button class="z lnb">Prêter…</button>');const rows2=x.wl?"":'<div class="ac vr'+(S?"":" nw")+'">'+vup+'</div>'+(S?'<div class="ac vr"><span class="sp">Saisons possédées</span><b>'+ow+' / '+(x.ns||ow?x.ns||ow:"?")+'</b></div>':"");
- return `<div class="it ${SC[x.s]||""}${open?" open":""}" data-id="${esc(x.id)}" tabindex="0"><div class="rw">${x.pi?`<img class="pz${M?" sq":""}" loading="lazy" alt="" onerror="this.remove()" src="${esc(pimg(x.pi,"w154"))}">`:""}<div class="rb"><div class="top"><div class="t">${esc(x.t)}</div><span class="nt">${x.wl?"":nl(x.n)}</span></div><div class="m">${((pre,suf)=>esc(pre)+(x.s?(pre?", ":"")+'<span class="fm">'+esc(x.s)+'</span>':"")+esc(suf))([x.r,x.y,S?(x.ns?(own(x)+" / "+x.ns+" saison"+(x.ns>1?"s":"")):""):M?(x.d?x.d+" min":""):B?(x.d?x.d+" p.":""):fmt(x.d),S?(x.ownedEpisodes!==undefined?x.ownedEpisodes+" / "+(x.episodesTotal||x.ne||0)+" épisodes possédés":(x.ne?x.ne+" épisodes":"")):""].filter(Boolean).join(", "),(S?(seen(x)?" · ✓ terminée":prog(x)?" · en cours "+sw+"/"+own(x):""):(x.vu?(M?" · ✓ écouté":B?" · ✓ lu":" · ✓ vu"):""))+(x.l?" · prêté à "+x.l.n:""))}</div></div></div><div class="ed"><button class="edit-item" type="button" title="Modifier la fiche" aria-label="Modifier la fiche">✎</button></div><div class="d">${x.ov?(M?tlHTML(x.ov):`<p class="ov">${esc(x.ov)}</p>`):""}<p><b>${M?"Style":"Genre"} :</b> ${esc(x.g||"à compléter")}</p>${M||B?"":`<p><b>Avec :</b> ${esc(x.a||"à compléter")}</p>`}<p><b>${M?"Label":B?"Éditeur":"Production"} :</b> ${esc(x.p||"à compléter")}</p><div class="ac"><select class="sup" aria-label="Support">${SUP.map(v=>`<option${v===x.s?" selected":""}>${v}</option>`).join("")}</select>${acts}</div>${rows2}<textarea class="cm" rows="2" placeholder="Commentaire, souvenir, état du disque…">${esc(x.c||"")}</textarea><p><a href="${esc(M?"https://musicbrainz.org/search?type=release_group&query="+encodeURIComponent(x.r+" "+x.t):B?"https://www.babelio.com/resrecherche.php?Recherche="+encodeURIComponent(x.t+" "+(x.r||"")):yurl(x.t))}" target="_blank" rel="noopener">${M?"Voir sur MusicBrainz":B?"Voir sur Babelio":"Voir sur Allociné"}</a> · <a href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(B?"couverture livre "+(x.r||"")+" "+x.t:(M?"pochette ":"jaquette ")+x.s+" "+(M?x.r+" ":"")+x.t+(x.y?" "+x.y:""))}" target="_blank" rel="noopener">${M?"Voir la pochette":B?"Voir la couverture":"Voir la jaquette"}</a></p>${x.v?'<p class="w">Ajouté depuis l\'appli : infos à vérifier <button class="z vfy">✓ C\'est vérifié</button></p>':""}<button class="z0 del">${x.wl?"Retirer de mes souhaits":"Retirer de la collection"}</button>${x.wl?"":`<div class="rt">${rt(x.n)}</div>`}</div></div>`}
+ return `<div class="it ${SC[x.s]||""}${open?" open":""}" data-id="${esc(x.id)}" tabindex="0"><div class="rw">${x.pi?`<img class="pz${M?" sq":""}" loading="lazy" alt="" onerror="this.remove()" src="${esc(pimg(x.pi,grid?"w342":"w154"))}">`:""}<div class="rb"><div class="top"><div class="t">${esc(x.t)}</div><span class="nt">${x.wl?"":nl(x.n)}</span></div><div class="m">${((pre,suf)=>esc(pre)+(x.s?(pre?", ":"")+'<span class="fm">'+esc(x.s)+'</span>':"")+esc(suf))([x.r,x.y,S?(x.ns?(own(x)+" / "+x.ns+" saison"+(x.ns>1?"s":"")):""):M?(x.d?x.d+" min":""):B?(x.d?x.d+" p.":""):fmt(x.d),S?(x.ownedEpisodes!==undefined?x.ownedEpisodes+" / "+(x.episodesTotal||x.ne||0)+" épisodes possédés":(x.ne?x.ne+" épisodes":"")):""].filter(Boolean).join(", "),(S?(seen(x)?" · ✓ terminée":prog(x)?" · en cours "+sw+"/"+own(x):""):(x.vu?(M?" · ✓ écouté":B?" · ✓ lu":" · ✓ vu"):""))+(x.l?" · prêté à "+x.l.n:""))}</div></div></div><div class="ed"><button class="edit-item" type="button" title="Modifier la fiche" aria-label="Modifier la fiche">✎</button></div><div class="d">${x.ov?(M?tlHTML(x.ov):`<p class="ov">${esc(x.ov)}</p>`):""}<p><b>${M?"Style":"Genre"} :</b> ${esc(x.g||"à compléter")}</p>${M||B?"":`<p><b>Avec :</b> ${esc(x.a||"à compléter")}</p>`}<p><b>${M?"Label":B?"Éditeur":"Production"} :</b> ${esc(x.p||"à compléter")}</p><div class="ac"><select class="sup" aria-label="Support">${SUP.map(v=>`<option${v===x.s?" selected":""}>${v}</option>`).join("")}</select>${acts}</div>${rows2}<textarea class="cm" rows="2" placeholder="Commentaire, souvenir, état du disque…">${esc(x.c||"")}</textarea><p><a href="${esc(M?"https://musicbrainz.org/search?type=release_group&query="+encodeURIComponent(x.r+" "+x.t):B?"https://www.babelio.com/resrecherche.php?Recherche="+encodeURIComponent(x.t+" "+(x.r||"")):yurl(x.t))}" target="_blank" rel="noopener">${M?"Voir sur MusicBrainz":B?"Voir sur Babelio":"Voir sur Allociné"}</a> · <a href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(B?"couverture livre "+(x.r||"")+" "+x.t:(M?"pochette ":"jaquette ")+x.s+" "+(M?x.r+" ":"")+x.t+(x.y?" "+x.y:""))}" target="_blank" rel="noopener">${M?"Voir la pochette":B?"Voir la couverture":"Voir la jaquette"}</a></p>${x.v?'<p class="w">Ajouté depuis l\'appli : infos à vérifier <button class="z vfy">✓ C\'est vérifié</button></p>':""}<button class="z0 del">${x.wl?"Retirer de mes souhaits":"Retirer de la collection"}</button>${x.wl?"":`<div class="rt">${rt(x.n)}</div>`}</div></div>`}
 function refresh(id,open){const f=D.find(x=>x.id===id),c=card(id);if(f&&c)c.outerHTML=rowHTML(f,open===undefined?c.classList.contains("open"):open)}
 function draw(){
   {const qv=$("q").value,hasF=document.activeElement===$("q");if(qv&&$("q").hidden)qOpen(true);else if(!qv&&!$("q").hidden&&!hasF)qOpen(false)}
@@ -316,17 +316,24 @@ async function olSearch(p){const j=await fj("https://openlibrary.org/search.json
 /* doublons : même titre + même auteur (nom de famille) ; on fusionne les infos des deux sources */
 const dedupBooks=a=>{const m=new Map();a.forEach(x=>{const pa=sk(String(x.realisateur||"").split(",")[0]).split(" ").filter(Boolean),au=(pa.pop()||"")+(pa.length?pa[0][0]:""),k=sk(x.titre)+"|"+au,o=m.get(k);
  if(!o)m.set(k,Object.assign({},x));else for(const f in x)if(!o[f]&&x[f])o[f]=x[f]});return[...m.values()]};
-const rankBooks=(q,a)=>{const qt=sk(q).split(" ").filter(Boolean);return a.map((x,i)=>{const hay=sk(x.titre+" "+x.realisateur).split(" "),cov=qt.filter(t=>hay.includes(t)).length/Math.max(1,qt.length);
- return{x,s:cov*60+tmScore(q,[x.titre])*.4+(x.affiche?3:0)+(x.synopsis?2:0)+(x.duree?1:0)-i*.3}}).sort((p,r)=>r.s-p.s).map(z=>z.x)};
-async function findBook(q){$("sc").innerHTML="";const c=q.replace(/[\s-]/g,"");
- if(/^(\d{13}|\d{9}[\dXx])$/.test(c)){await lookupISBN(c);return}
- const my=++fseq;msg("Recherche en cours…");let a=[],o=[],ge=null,oe=null;
- try{a=await gbSearch(q,10)}catch(e){ge=e}
- if(a.length<4){try{o=await olSearch("q="+encodeURIComponent(q))}catch(e){oe=e}}
+const rankBooks=(q,a,au)=>{const qt=sk(q+" "+(au||"")).split(" ").filter(Boolean);return a.map((x,i)=>{const hay=sk(x.titre+" "+x.realisateur).split(" "),cov=qt.filter(t=>hay.includes(t)).length/Math.max(1,qt.length);
+ return{x,s:cov*60+tmScore(q,[x.titre])*.4+(au?tmScore(au,[x.realisateur])*.2:0)+(x.affiche?3:0)+(x.synopsis?2:0)+(x.duree?1:0)-i*.3}}).sort((p,r)=>r.s-p.s).map(z=>z.x)};
+/* q = titre, au = auteur (facultatif) : on interroge « titre » ET « auteur » séparément, puis on élargit si rien */
+async function findBook(q,au){$("sc").innerHTML="";const c=q.replace(/[\s-]/g,"");
+ if(!au&&/^(\d{13}|\d{9}[\dXx])$/.test(c)){await lookupISBN(c);return}
+ const my=++fseq,Q=q.replace(/"/g," ").replace(/\s+/g," ").trim(),A=String(au||"").replace(/"/g," ").replace(/\s+/g," ").trim();msg("Recherche en cours…");
+ let a=[],o=[],ge=null,oe=null;
+ if(A){
+  try{a=await gbSearch('intitle:"'+Q+'" inauthor:"'+A+'"',10)}catch(e){ge=e}
+  if(a.length<3){try{o=await olSearch("title="+encodeURIComponent(Q)+"&author="+encodeURIComponent(A))}catch(e){oe=e}}
+  if(!a.length&&!o.length&&!(ge&&oe)){try{a=await gbSearch(Q+" "+A,10);ge=null}catch(e){ge=e}}}
+ else{
+  try{a=await gbSearch(Q,10)}catch(e){ge=e}
+  if(a.length<4){try{o=await olSearch("q="+encodeURIComponent(Q))}catch(e){oe=e}}}
  if(my!==fseq)return;
  if(ge&&oe){msg("Recherche impossible ("+netMsg(ge)+") : remplis la fiche à la main.");return}
  const src=a.length&&o.length?"Google Livres + Open Library":a.length?"Google Livres":"Open Library";
- show(rankBooks(q,dedupBooks(a.concat(o))).slice(0,6),src)}
+ show(rankBooks(Q,dedupBooks(a.concat(o)),A).slice(0,6),src)}
 async function lookupISBN(c){c=String(c).replace(/[^0-9Xx]/g,"");$("sq").value=c;$("sc").innerHTML="";msg("ISBN "+c+" : recherche…");
  try{let a=[],src="Google Livres";try{a=await gbSearch("isbn:"+c)}catch(e){}
   if(!a.length){try{a=await olSearch("isbn="+c);src="Open Library"}catch(e){}}
@@ -388,20 +395,23 @@ async function mbTracks(rg){const j=await mbget("https://musicbrainz.org/ws/2/re
   return md.map((m,i)=>{const t=(m.tracks||[]).map(x=>x.title||(x.recording||{}).title||"").filter(Boolean);return(md.length>1?"## "+(m.title||"Disque "+(i+1))+"\n":"")+t.join("\n")}).join("\n")}
  return""}
 const MBX=/live|compilation|soundtrack|remix|demo|mixtape|dj-mix|interview|spokenword|audiobook/i;
-async function mbz(q,y){const c=q.replace(/[+\-&|!(){}\[\]^"~*?:\\\/]/g," ").replace(/\s+/g," ").trim();if(!c)return[];
- const u=new URL("https://musicbrainz.org/ws/2/release-group/");
- u.searchParams.set("query","(releasegroup:("+c+") OR artist:("+c+"))"+(y?" AND firstreleasedate:"+y:""));u.searchParams.set("fmt","json");u.searchParams.set("limit","15");
- const j=await mbget(u),qt=sk(c).split(" ").filter(Boolean);
- const rows=(j["release-groups"]||[]).map(x=>{const art=(x["artist-credit"]||[]).map(a=>a.name).join(", "),hay=sk(x.title+" "+art).split(" "),cov=qt.filter(t=>hay.includes(t)).length/Math.max(1,qt.length),pt=x["primary-type"]||"",st=(x["secondary-types"]||[]).join(" "),yr=(x["first-release-date"]||"").slice(0,4);
-  let s=(x.score||0)*.4+cov*50+(sk(x.title)===sk(c)?25:0)+(pt==="Album"?15:pt==="EP"?5:pt==="Single"?-12:0)-(st&&!MBX.test(c)?15:0);
+async function mbz(q,y,au){const cl=v=>String(v||"").replace(/[+\-&|!(){}\[\]^"~*?:\\\/]/g," ").replace(/\s+/g," ").trim(),c=cl(q),A=cl(au);if(!c)return[];
+ const run=async query=>{const u=new URL("https://musicbrainz.org/ws/2/release-group/");u.searchParams.set("query",query+(y?" AND firstreleasedate:"+y:""));u.searchParams.set("fmt","json");u.searchParams.set("limit","15");return(await mbget(u))["release-groups"]||[]};
+ let list=[];
+ if(A){list=await run('releasegroup:("'+c+'") AND artist:("'+A+'")');if(!list.length)list=await run("(releasegroup:("+c+" "+A+") OR artist:("+c+" "+A+"))")}
+ else list=await run("(releasegroup:("+c+") OR artist:("+c+"))");
+ const full=(c+" "+A).trim(),qt=sk(full).split(" ").filter(Boolean);
+ const rows=list.map(x=>{const art=(x["artist-credit"]||[]).map(a=>a.name).join(", "),hay=sk(x.title+" "+art).split(" "),cov=qt.filter(t=>hay.includes(t)).length/Math.max(1,qt.length),pt=x["primary-type"]||"",st=(x["secondary-types"]||[]).join(" "),yr=(x["first-release-date"]||"").slice(0,4);
+  let s=(x.score||0)*.4+cov*50+(sk(x.title)===sk(c)?25:0)+(pt==="Album"?15:pt==="EP"?5:pt==="Single"?-12:0)-(st&&!MBX.test(full)?15:0);
   if(y&&yr)s+=+yr===+y?20:Math.abs(yr-y)===1?6:0;
   return{s,v:{titre:x.title,realisateur:art,annee:yr,genre:(x.tags||[]).sort((a,b)=>b.count-a.count).slice(0,3).map(t=>t.name).join(" / "),affiche:"mb:"+x.id,production:"",duree:"",acteurs:"",synopsis:""}}}).sort((a,b)=>b.s-a.s);
  return dedupC(rows.map(r=>r.v)).slice(0,6)}
-async function find(q,y){const my=++fseq,ms2=t=>{if(my===fseq)msg(t)},sh2=(a,s)=>{if(my===fseq)show(a,s)};
+async function find(q,y,au){const my=++fseq,ms2=t=>{if(my===fseq)msg(t)},sh2=(a,s)=>{if(my===fseq)show(a,s)};
  if(typ==="f"||typ==="s"){const r=splitYear(q,y);q=r[0];y=r[1]}
- if(typ==="b"){await findBook(q);return}
- if(view==="w"&&typ==="m"){ms2("Recherche de l’artiste…");
-  try{const ar=await mbget("https://musicbrainz.org/ws/2/artist/?query="+encodeURIComponent(q)+"&fmt=json&limit=5"),list=ar.artists||[],artist=list.find(z=>sk(z.name)===sk(q))||list[0];
+ if(typ==="b"||typ==="m"){au=String(au||"").trim();if(!au){const m=q.split(/\s+[·|—]\s+/);if(m.length===2&&m[0].trim()&&m[1].trim()){q=m[0].trim();au=m[1].trim()}}}
+ if(typ==="b"){await findBook(q,au);return}
+ if(view==="w"&&typ==="m"){ms2("Recherche de l’artiste…");const qa=au||q;
+  try{const ar=await mbget("https://musicbrainz.org/ws/2/artist/?query="+encodeURIComponent(qa)+"&fmt=json&limit=5"),list=ar.artists||[],artist=list.find(z=>sk(z.name)===sk(qa))||list[0];
    if(artist){const rg=await mbget("https://musicbrainz.org/ws/2/release-group/?artist="+artist.id+"&type="+encodeURIComponent("album|ep")+"&fmt=json&limit=50"),
     works=(rg["release-groups"]||[]).slice().sort((a,b)=>String(b["first-release-date"]||"").localeCompare(String(a["first-release-date"]||""))).map(v=>({titre:v.title,annee:(v["first-release-date"]||"").slice(0,4),realisateur:artist.name,genre:(v.tags||[]).slice(0,3).map(z=>z.name).join(" / "),affiche:"mb:"+v.id,synopsis:"",support:"CD"}));
     if(works.length){sh2(works.slice(0,25),"albums de "+artist.name);return}}}catch(e){}}
@@ -411,7 +421,7 @@ async function find(q,y){const my=++fseq,ms2=t=>{if(my===fseq)msg(t)},sh2=(a,s)=
     if(all.length){sh2(all,"Œuvres de "+person.name);return}}}catch(e){}}
  if(typ==="m"&&/^[\d\s-]{8,16}$/.test(q)&&ean(q.replace(/\D/g,""))){lookupBC(q);return}
  ms2("Recherche en cours…");$("sc").innerHTML="";
- if(typ==="m"){let a;try{a=await mbz(q,y)}catch(e){ms2("Recherche impossible ("+netMsg(e)+") : remplis la fiche à la main.");return}sh2(a,"MusicBrainz");return}
+ if(typ==="m"){let a;try{a=await mbz(q,y,au)}catch(e){ms2("Recherche impossible ("+netMsg(e)+") : remplis la fiche à la main.");return}sh2(a,"MusicBrainz");return}
  let a=[],src="",te=null;
  if(tkey()){try{a=await(typ==="s"?tmdbTv:tmdb)(q,y);src="TMDB"}catch(e){a=[];te=e}}
  if(!a.length){try{a=await wiki(q,y,typ==="s"?"s":"f");src="Wikidata"}catch(e){ms2("Recherche impossible ("+netMsg(e)+") : remplis la fiche à la main.");return}}
@@ -420,7 +430,7 @@ async function find(q,y){const my=++fseq,ms2=t=>{if(my===fseq)msg(t)},sh2=(a,s)=
 /* Scan photo : Gemini ne renvoie que le titre (1 petit appel), la fiche vient de TMDB/Wikidata */
 async function scan(blob){const k=localStorage.getItem(KEY);if(!k){openSettings("Pour scanner une jaquette, colle d'abord ta clé Gemini (gratuite). Sinon, cherche par titre.");return}
  msg("Lecture de la jaquette…");$("sc").innerHTML="";
- try{const mod=localStorage.getItem(MOD)||DEF_MOD,txt=typ==="b"?"Voici la photo d'une couverture de livre ou de BD. Lis le titre et le nom de l'auteur. Réponds uniquement en JSON : {\"titre\":\"titre du livre\",\"artiste\":\"auteur\",\"annee\":0,\"support\":\"Roman, BD, Manga, Comics, Jeunesse ou Essai si évident, sinon vide\"}":typ==="m"?"Voici la photo d'une pochette d'album (vinyle, CD ou K7). Lis le titre de l'album et le nom de l'artiste. Réponds uniquement en JSON : {\"titre\":\"titre de l'album\",\"artiste\":\"artiste\",\"annee\":année si visible sinon 0,\"support\":\"Vinyle, CD ou K7 si visible, sinon vide\"}":"Voici la photo d'une jaquette de DVD ou Blu-ray. Lis le titre du film ou de la série. Réponds uniquement en JSON : {\"titre\":\"titre lu sur la jaquette\",\"annee\":année si visible sinon 0,\"support\":\"DVD ou Blu-ray si visible, sinon vide\"}";
+ try{const mod=localStorage.getItem(MOD)||DEF_MOD,txt=typ==="b"?"Voici la photo d'une couverture de livre ou de BD. Lis le titre (sans le nom de l'auteur ni la collection) et le nom de l'auteur (prénom et nom). Réponds uniquement en JSON : {\"titre\":\"titre du livre\",\"artiste\":\"auteur\",\"annee\":0,\"support\":\"Roman, BD, Manga, Comics, Jeunesse ou Essai si évident, sinon vide\"}":typ==="m"?"Voici la photo d'une pochette d'album (vinyle, CD ou K7). Lis le titre de l'album (sans le nom de l'artiste) et le nom de l'artiste. Réponds uniquement en JSON : {\"titre\":\"titre de l'album\",\"artiste\":\"artiste\",\"annee\":année si visible sinon 0,\"support\":\"Vinyle, CD ou K7 si visible, sinon vide\"}":"Voici la photo d'une jaquette de DVD ou Blu-ray. Lis le titre du film ou de la série. Réponds uniquement en JSON : {\"titre\":\"titre lu sur la jaquette\",\"annee\":année si visible sinon 0,\"support\":\"DVD ou Blu-ray si visible, sinon vide\"}";
   const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(mod)+":generateContent?key="+encodeURIComponent(k),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:[{inline_data:{mime_type:"image/jpeg",data:await b64(blob)}},{text:txt}]}],generationConfig:{responseMimeType:"application/json",temperature:0,maxOutputTokens:1024}}),signal:AbortSignal.timeout?AbortSignal.timeout(45000):undefined});
   if(!r.ok){let d="";try{const e=await r.json();d=(e.error&&e.error.message)||""}catch(_){}
    msg(r.status===429?"Quota Google épuisé pour l'instant : tape le titre dans la recherche (ça ne consomme rien).":"Erreur Google ("+r.status+") : "+d.slice(0,120)+" — tu peux chercher par titre.");return}
@@ -429,7 +439,7 @@ async function scan(blob){const k=localStorage.getItem(KEY);if(!k){openSettings(
   try{o=JSON.parse(t)}catch(_){const i=t.indexOf("{"),e=t.lastIndexOf("}");try{o=JSON.parse(t.slice(i,e+1))}catch(__){o=null}}
   if(Array.isArray(o))o=o[0];
   if(!o||!o.titre){msg("Titre illisible sur la photo : tape-le dans la recherche.");return}
-  $("sq").value=o.titre+((typ==="m"||typ==="b")&&o.artiste?" "+o.artiste:"");await find($("sq").value,typ==="m"||typ==="b"?"":(parseInt(o.annee,10)||""));
+  const au=(typ==="m"||typ==="b")?String(o.artiste||"").trim():"",ti=String(o.titre).trim();$("sq").value=ti+(au?" · "+au:"");await find(ti,typ==="m"||typ==="b"?"":(parseInt(o.annee,10)||""),au);
   if(SUP.includes(o.support))$("fS").value=o.support}
  catch(e){msg(navigator.onLine?(e&&(e.name==="TimeoutError"||e.name==="AbortError")?"La lecture a pris trop de temps : cherche par titre.":"Échec : "+((e&&e.message)||e)):"Pas de connexion : remplis la fiche à la main.")}}
 const b64=b=>new Promise((a,r)=>{const f=new FileReader();f.onload=()=>a(String(f.result).split(",")[1]);f.onerror=r;f.readAsDataURL(b)});
@@ -458,6 +468,9 @@ $("fok").onclick=()=>{if(view==="w"&&!$("manual").open){$("manual").open=true;re
  if(old)Object.assign(old,f);else D.push(f);put(f);editingId=null;lists();$("ad").hidden=true;$("manual").open=false;$("fok").textContent="Ajouter à ma collection";$("ad").querySelector("h2").textContent="Ajouter un film";$("q").value=t;draw();const c=card(id);if(c)c.classList.add("open")};
 /* ---------- réglages, export / import CSV ---------- */
 function openSettings(m){$("sg").hidden=false;snapUI();$("kk").value=localStorage.getItem(KEY)||"";$("km").value=localStorage.getItem(MOD)||"";$("km").placeholder="Modèle (défaut : "+DEF_MOD+")";$("sgs").textContent=m||"";$("km2").textContent=localStorage.getItem(KEY)?"Clé enregistrée sur cet appareil.":"";$("tk").value=localStorage.getItem(TK)||"";$("tk2").textContent=localStorage.getItem(TK)?"Clé TMDB enregistrée sur cet appareil.":"Pas de clé TMDB : la recherche passe par Wikidata.";if(m)$("kk").focus()}
+const applyGrid=()=>{if(grid)document.body.dataset.g="1";else delete document.body.dataset.g;const b=$("gv");if(b)b.setAttribute("aria-pressed",grid?"true":"false")};
+{const b=$("gv");if(b)b.onclick=()=>{grid=!grid;try{localStorage.setItem("mt_grid",grid?"1":"0")}catch(e){}applyGrid();draw();window.scrollTo(0,0)}}
+applyGrid();
 $("gear").onclick=()=>openSettings();
 $("gx").onclick=()=>{$("sg").hidden=true};
 $("ks").onclick=()=>{const k=$("kk").value.trim(),m=$("km").value.trim();
@@ -466,9 +479,10 @@ $("ks").onclick=()=>{const k=$("kk").value.trim(),m=$("km").value.trim();
 $("tks").onclick=()=>{const k=$("tk").value.trim();
  try{k?localStorage.setItem(TK,k):localStorage.removeItem(TK)}catch(e){$("sgs").textContent="Impossible d'enregistrer sur cet appareil.";return}
  $("sgs").textContent=k?"Clé TMDB enregistrée.":"Clé TMDB retirée.";$("tk2").textContent=k?"Clé TMDB enregistrée sur cet appareil.":"Pas de clé TMDB : la recherche passe par Wikidata."};
-$("sh").onclick=async()=>{const url=location.origin+location.pathname.replace(/index\.html$/,""),txt="My Mediatheque : catalogue tes DVD/Blu-ray, gratuit et sans compte. Ouvre le lien dans Safari, puis Partager → « Sur l'écran d'accueil ».";
- try{if(navigator.share){await navigator.share({title:"My Mediatheque",text:txt,url});return}}catch(e){if(e&&e.name==="AbortError")return}
- try{await navigator.clipboard.writeText(txt+" "+url);$("sgs").textContent="Lien copié : colle-le dans un message."}catch(e){$("sgs").textContent="Lien à envoyer : "+url}};
+$("sh").onclick=async()=>{const base=/^https?:$/.test(location.protocol)?location.origin+location.pathname.replace(/index\.html$/,""):"https://pierremehouas-beep.github.io/Ma-Mediatheque/",
+ full="My Mediatheque : catalogue tes films, séries, albums et livres, gratuit et sans compte. Ouvre ce lien dans Safari, puis Partager → « Sur l'écran d'accueil » :\n"+base;
+ try{if(navigator.share){await navigator.share({title:"My Mediatheque",text:full});return}}catch(e){if(e&&e.name==="AbortError")return}
+ try{await navigator.clipboard.writeText(full);$("sgs").textContent="Lien copié : colle-le dans un message."}catch(e){$("sgs").textContent="Lien à envoyer : "+base}};
 const COLS=["Titre","Réalisateur","Durée (min)","Genre","Année de sortie","Acteurs principaux","Support","Maison de production","Note","Vu le","Prêté à","Prêté le","Commentaire","Liste","Affiche","Synopsis","Type","Saisons","Épisodes","Saisons vues","Saisons possédées","Épisodes possédés","Détail épisodes par saison","Total épisodes"];
 const cell=v=>{v=String(v===undefined||v===null?"":v);return /[;"\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
 async function out(name,text){const blob=new Blob(["\uFEFF"+text],{type:"text/csv;charset=utf-8"});const file=new File([blob],name,{type:"text/csv"});
