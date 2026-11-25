@@ -1,5 +1,5 @@
 /* My Mediatheque — cache limité à cette application */
-const CACHE = "my-mediatheque-v7";
+const CACHE = "my-mediatheque-v8";
 const APP_SHELL = ["./", "./index.html", "./style.css", "./app.js"];
 const OPTIONAL = ["./manifest.json", "./icon-192.png", "./icon-512.png"];
 const IMG_MAX = 250;       // nombre maximal d'affiches gardées pour le hors-ligne

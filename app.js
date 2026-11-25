@@ -316,7 +316,11 @@ const gbMap=v=>{const i=v.volumeInfo||{},cat=(i.categories||[]).join(" / "),low=
  const gen=[...new Set(cat.split(/\s*\/\s*/).map(c=>GBC[c]).filter(Boolean))].slice(0,3).join(" / ");
  const sup=/manga/.test(low)?"Manga":/comics|graphic/.test(low)?"BD":/juvenile|children/.test(low)?"Jeunesse":/fiction|novel|literary/.test(low)?"Roman":/biograph|history|science|philosoph|psycholog|business|self-help/.test(low)?"Essai":"";
  return{titre:(i.title||"")+(i.subtitle?" : "+i.subtitle:""),realisateur:(i.authors||[]).join(", "),annee:(i.publishedDate||"").slice(0,4),duree:i.pageCount||"",genre:gen,production:i.publisher||"",synopsis:htmlTxt(i.description),affiche:i.imageLinks&&v.id?"gb:"+v.id:"",support:sup,acteurs:""}};
-async function gbSearch(q,n){const j=await fj("https://www.googleapis.com/books/v1/volumes?printType=books&country=FR&maxResults="+(n||8)+"&q="+encodeURIComponent(q),undefined,9000,1);return(j.items||[]).map(gbMap).filter(x=>x.titre)}
+const GBK="mt_gbooks_key";
+const gbkey=()=>{try{return(localStorage.getItem(GBK)||"").trim()}catch(e){return""}};
+/* Google Livres : avec ta clé si elle existe ; si Google la refuse (400/403), on retente sans clé plutôt que de planter */
+async function gbJ(u,ms){const k=gbkey();if(!k)return fj(u,undefined,ms,1);try{return await fj(u+"&key="+encodeURIComponent(k),undefined,ms,1)}catch(e){if(e&&(e.status===400||e.status===403))return fj(u,undefined,ms,1);throw e}}
+async function gbSearch(q,n){const j=await gbJ("https://www.googleapis.com/books/v1/volumes?printType=books&country=FR&maxResults="+(n||8)+"&q="+encodeURIComponent(q),9000);return(j.items||[]).map(gbMap).filter(x=>x.titre)}
 async function olSearch(p){const j=await fj("https://openlibrary.org/search.json?limit=8&fields=title,author_name,first_publish_year,number_of_pages_median,publisher,cover_i&"+p,undefined,9000,1);
  return(j.docs||[]).map(d=>({titre:d.title||"",realisateur:(d.author_name||[]).slice(0,3).join(", "),annee:d.first_publish_year?String(d.first_publish_year):"",duree:d.number_of_pages_median||"",genre:"",production:(d.publisher||[])[0]||"",synopsis:"",affiche:d.cover_i?"ol:"+d.cover_i:"",support:"",acteurs:""})).filter(x=>x.titre)}
 /* doublons : même titre + même auteur (nom de famille) ; on fusionne les infos des deux sources */
@@ -345,7 +349,7 @@ function isbnNorm(v){const c=String(v||"").toUpperCase().replace(/[^0-9X]/g,"");
  if(/^\d{9}[\dX]$/.test(c)){let i13="978"+c.slice(0,9);i13+=isbn13c(i13);return{ok:isbn10c(c)===c[9],i10:c,i13}}
  if(/^\d{13}$/.test(c)){const ok=isbn13c(c)===+c[12];const i10=/^978/.test(c)?c.slice(3,12)+isbn10c(c.slice(3,12)):"";return{ok,i10,i13:c}}
  return null}
-const gbVol=async id=>{try{return gbMap(await fj("https://www.googleapis.com/books/v1/volumes/"+encodeURIComponent(id)+"?country=FR",undefined,9000,1))}catch(e){return null}};
+const gbVol=async id=>{try{return gbMap(await gbJ("https://www.googleapis.com/books/v1/volumes/"+encodeURIComponent(id)+"?country=FR",9000))}catch(e){return null}};
 /* source 1 : Google Livres (ISBN-13 puis ISBN-10 ; le résumé complet est pris dans la fiche détaillée si la liste n'en a pas) */
 async function isbnGB(n){let out=[],err=null;
  for(const q of [n.i13,n.i10].filter(Boolean)){try{const r=await gbSearch("isbn:"+q,3);if(r.length){out=r;break}}catch(e){err=e}}
@@ -566,7 +570,7 @@ $("fok").onclick=()=>{if(view==="w"&&!$("manual").open){$("manual").open=true;re
  const f={...(old||{}),id,t,r:$("fR").value.trim(),y,d:n($("fD").value),g:$("fG").value.trim(),a:$("fA").value.trim(),s:$("fS").value,p:$("fP").value.trim(),v:old?undefined:1};if(typ==="s"){f.k="s";const a=n($("fNs").value),b=n($("fNe").value);if(a)f.ns=a;if(b)f.ne=b;if(cur.seasonEpisodes){f.seasonEpisodes=cur.seasonEpisodes;f.episodesTotal=cur.seasonEpisodes.reduce((sum,z)=>sum+z.episodes,0);const selected=[...$("seasonPick").querySelectorAll('input[type="checkbox"]:checked')].map(z=>+z.value);f.seasonsOwned=selected;f.ns=cur.seasonEpisodes.length;f.ne=cur.seasonEpisodes.reduce((sum,z)=>sum+(selected.includes(z.season)?z.episodes:0),0);f.ownedSeasons=selected.length;f.ownedEpisodes=f.ne;}}if(typ==="m")f.k="m";if(typ==="b")f.k="b";if(view==="w")f.wl=1;if(cur.pi)f.pi=cur.pi;if(cur.isbn)f.isbn=cur.isbn;{const o=$("fO").value.trim();if(o)f.ov=o;else{delete f.ov;if(old)delete old.ov}}
  if(old)Object.assign(old,f);else D.push(f);put(f);editingId=null;lists();$("ad").hidden=true;$("manual").open=false;$("fok").textContent="Ajouter à ma collection";$("ad").querySelector("h2").textContent="Ajouter un film";$("q").value=t;draw();const c=card(id);if(c)c.classList.add("open")};
 /* ---------- réglages, export / import CSV ---------- */
-function openSettings(m){$("sg").hidden=false;snapUI();$("kk").value=localStorage.getItem(KEY)||"";$("km").value=localStorage.getItem(MOD)||"";$("km").placeholder="Modèle (défaut : "+DEF_MOD+")";$("sgs").textContent=m||"";$("km2").textContent=localStorage.getItem(KEY)?"Clé enregistrée sur cet appareil.":"";$("tk").value=localStorage.getItem(TK)||"";$("tk2").textContent=localStorage.getItem(TK)?"Clé TMDB enregistrée sur cet appareil.":"Pas de clé TMDB : la recherche passe par Wikidata.";if(m){$("acG").open=true;$("kk").focus()}}
+function openSettings(m){$("sg").hidden=false;snapUI();$("kk").value=localStorage.getItem(KEY)||"";$("km").value=localStorage.getItem(MOD)||"";$("km").placeholder="Modèle (défaut : "+DEF_MOD+")";$("sgs").textContent=m||"";$("km2").textContent=localStorage.getItem(KEY)?"Clé enregistrée sur cet appareil.":"";$("tk").value=localStorage.getItem(TK)||"";$("tk2").textContent=localStorage.getItem(TK)?"Clé TMDB enregistrée sur cet appareil.":"Pas de clé TMDB : la recherche passe par Wikidata.";$("gbk").value=localStorage.getItem(GBK)||"";$("gbk2").textContent=localStorage.getItem(GBK)?"Clé Google Livres enregistrée sur cet appareil.":"Pas de clé : l'appli utilise le quota partagé de Google (parfois saturé).";if(m){$("acG").open=true;$("kk").focus()}}
 function applyGrid(){if(gridOn())document.body.dataset.g="1";else delete document.body.dataset.g;document.body.dataset.gc=String(gcols);document.documentElement.style.setProperty("--gc",gcols);const b=$("gv");if(b)b.setAttribute("aria-pressed",grid?"true":"false")}
 {const b=$("gv");if(b)b.onclick=()=>{grid=!grid;try{localStorage.setItem("mt_grid",grid?"1":"0")}catch(e){}applyGrid();draw();window.scrollTo(0,0)}}
 applyGrid();
@@ -589,6 +593,9 @@ $("ks").onclick=()=>{const k=$("kk").value.trim(),m=$("km").value.trim();
 $("tks").onclick=()=>{const k=$("tk").value.trim();
  try{k?localStorage.setItem(TK,k):localStorage.removeItem(TK)}catch(e){$("sgs").textContent="Impossible d'enregistrer sur cet appareil.";return}
  $("sgs").textContent=k?"Clé TMDB enregistrée.":"Clé TMDB retirée.";$("tk2").textContent=k?"Clé TMDB enregistrée sur cet appareil.":"Pas de clé TMDB : la recherche passe par Wikidata."};
+$("gbks").onclick=()=>{const k=$("gbk").value.trim();
+ try{k?localStorage.setItem(GBK,k):localStorage.removeItem(GBK)}catch(e){$("sgs").textContent="Impossible d'enregistrer sur cet appareil.";return}
+ $("sgs").textContent=k?"Clé Google Livres enregistrée.":"Clé Google Livres retirée.";$("gbk2").textContent=k?"Clé Google Livres enregistrée sur cet appareil.":"Pas de clé : l'appli utilise le quota partagé de Google (parfois saturé).";};
 $("sh").onclick=async()=>{const base=/^https?:$/.test(location.protocol)?location.origin+location.pathname.replace(/index\.html$/,""):"https://pierremehouas-beep.github.io/Ma-Mediatheque/",
  full="My Mediatheque : catalogue tes films, séries, albums et livres, gratuit et sans compte. Ouvre ce lien dans Safari, puis Partager → « Sur l'écran d'accueil » :\n"+base;
  try{if(navigator.share){await navigator.share({title:"My Mediatheque",text:full});return}}catch(e){if(e&&e.name==="AbortError")return}
