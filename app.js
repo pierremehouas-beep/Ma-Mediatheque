@@ -238,7 +238,7 @@ async function fj(u,o,ms,tries){tries=tries===undefined?1:tries;
    if(e&&e.name==="AbortError"){const x=new Error("Délai dépassé");x.timeout=1;throw x}
    throw e}
   finally{clearTimeout(t)}}}
-const netMsg=e=>!navigator.onLine?"pas de connexion":e&&e.status===401?"clé TMDB refusée, vérifie-la dans les réglages":e&&e.status===429?"service saturé, réessaie dans un instant":e&&e.timeout?"réponse trop lente":"service indisponible";
+const netMsg=e=>!navigator.onLine?"pas de connexion":e&&e.status===401?"clé TMDB refusée, vérifie-la dans les réglages":e&&e.status===403?"accès refusé par le service":e&&e.status===429?"service saturé, réessaie dans un instant":e&&e.timeout?"réponse trop lente":"service indisponible";
 /* ---------- pertinence : score de ressemblance titre / requête, classement, doublons ---------- */
 function tmScore(q,names){const Q=sk(q);if(!Q)return 0;const qt=Q.split(" ");let best=0;
  for(const n0 of names){const n=sk(n0);if(!n)continue;if(n===Q)return 100;
@@ -316,8 +316,8 @@ const gbMap=v=>{const i=v.volumeInfo||{},cat=(i.categories||[]).join(" / "),low=
  const gen=[...new Set(cat.split(/\s*\/\s*/).map(c=>GBC[c]).filter(Boolean))].slice(0,3).join(" / ");
  const sup=/manga/.test(low)?"Manga":/comics|graphic/.test(low)?"BD":/juvenile|children/.test(low)?"Jeunesse":/fiction|novel|literary/.test(low)?"Roman":/biograph|history|science|philosoph|psycholog|business|self-help/.test(low)?"Essai":"";
  return{titre:(i.title||"")+(i.subtitle?" : "+i.subtitle:""),realisateur:(i.authors||[]).join(", "),annee:(i.publishedDate||"").slice(0,4),duree:i.pageCount||"",genre:gen,production:i.publisher||"",synopsis:htmlTxt(i.description),affiche:i.imageLinks&&v.id?"gb:"+v.id:"",support:sup,acteurs:""}};
-async function gbSearch(q,n){const j=await fj("https://www.googleapis.com/books/v1/volumes?printType=books&maxResults="+(n||8)+"&q="+encodeURIComponent(q));return(j.items||[]).map(gbMap).filter(x=>x.titre)}
-async function olSearch(p){const j=await fj("https://openlibrary.org/search.json?limit=8&fields=title,author_name,first_publish_year,number_of_pages_median,publisher,cover_i&"+p);
+async function gbSearch(q,n){const j=await fj("https://www.googleapis.com/books/v1/volumes?printType=books&country=FR&maxResults="+(n||8)+"&q="+encodeURIComponent(q),undefined,9000,1);return(j.items||[]).map(gbMap).filter(x=>x.titre)}
+async function olSearch(p){const j=await fj("https://openlibrary.org/search.json?limit=8&fields=title,author_name,first_publish_year,number_of_pages_median,publisher,cover_i&"+p,undefined,9000,1);
  return(j.docs||[]).map(d=>({titre:d.title||"",realisateur:(d.author_name||[]).slice(0,3).join(", "),annee:d.first_publish_year?String(d.first_publish_year):"",duree:d.number_of_pages_median||"",genre:"",production:(d.publisher||[])[0]||"",synopsis:"",affiche:d.cover_i?"ol:"+d.cover_i:"",support:"",acteurs:""})).filter(x=>x.titre)}
 /* doublons : même titre + même auteur (nom de famille) ; on fusionne les infos des deux sources */
 const dedupBooks=a=>{const m=new Map();a.forEach(x=>{const pa=sk(String(x.realisateur||"").split(",")[0]).split(" ").filter(Boolean),au=(pa.pop()||"")+(pa.length?pa[0][0]:""),k=sk(x.titre)+"|"+au,o=m.get(k);
@@ -325,21 +325,19 @@ const dedupBooks=a=>{const m=new Map();a.forEach(x=>{const pa=sk(String(x.realis
 const rankBooks=(q,a,au)=>{const qt=sk(q+" "+(au||"")).split(" ").filter(Boolean);return a.map((x,i)=>{const hay=sk(x.titre+" "+x.realisateur).split(" "),cov=qt.filter(t=>hay.includes(t)).length/Math.max(1,qt.length);
  return{x,s:cov*60+tmScore(q,[x.titre])*.4+(au?tmScore(au,[x.realisateur])*.2:0)+(x.affiche?3:0)+(x.synopsis?2:0)+(x.duree?1:0)-i*.3}}).sort((p,r)=>r.s-p.s).map(z=>z.x)};
 /* q = titre, au = auteur (facultatif) : on interroge « titre » ET « auteur » séparément, puis on élargit si rien */
+/* q = titre, au = auteur (facultatif). Google Livres et Open Library sont interrogés EN MÊME TEMPS : si l'un est saturé ou lent, l'autre répond quand même */
 async function findBook(q,au){$("sc").innerHTML="";const c=q.replace(/[\s-]/g,"");
  if(!au&&/^(\d{13}|\d{9}[\dXx])$/.test(c)){await lookupISBN(c);return}
  const my=++fseq,Q=q.replace(/"/g," ").replace(/\s+/g," ").trim(),A=String(au||"").replace(/"/g," ").replace(/\s+/g," ").trim();msg("Recherche en cours…");
- let a=[],o=[],ge=null,oe=null;
- if(A){
-  try{a=await gbSearch('intitle:"'+Q+'" inauthor:"'+A+'"',10)}catch(e){ge=e}
-  if(a.length<3){try{o=await olSearch("title="+encodeURIComponent(Q)+"&author="+encodeURIComponent(A))}catch(e){oe=e}}
-  if(!a.length&&!o.length&&!(ge&&oe)){try{a=await gbSearch(Q+" "+A,10);ge=null}catch(e){ge=e}}}
- else{
-  try{a=await gbSearch(Q,10)}catch(e){ge=e}
-  if(a.length<4){try{o=await olSearch("q="+encodeURIComponent(Q))}catch(e){oe=e}}}
+ const okv=r=>r.status==="fulfilled"?r.value:[],erv=r=>r.status==="rejected"?r.reason:null;
+ const both=async(g,o)=>{const rs=await Promise.allSettled([g(),o()]);return{a:okv(rs[0]),o:okv(rs[1]),ge:erv(rs[0]),oe:erv(rs[1])}};
+ let r=A?await both(()=>gbSearch('intitle:"'+Q+'" inauthor:"'+A+'"',10),()=>olSearch("title="+encodeURIComponent(Q)+"&author="+encodeURIComponent(A)))
+  :await both(()=>gbSearch(Q,10),()=>olSearch("q="+encodeURIComponent(Q)));
+ if(A&&!r.a.length&&!r.o.length&&!(r.ge&&r.oe))r=await both(()=>gbSearch(Q+" "+A,10),()=>olSearch("q="+encodeURIComponent(Q+" "+A)));
  if(my!==fseq)return;
- if(ge&&oe){msg("Recherche impossible ("+netMsg(ge)+") : remplis la fiche à la main.");return}
- const src=a.length&&o.length?"Google Livres + Open Library":a.length?"Google Livres":"Open Library";
- show(rankBooks(Q,dedupBooks(a.concat(o)),A).slice(0,6),src)}
+ if(r.ge&&r.oe){msg("Recherche impossible ("+netMsg(r.ge)+") : réessaie dans un instant, ou remplis la fiche à la main.");return}
+ const src=r.a.length&&r.o.length?"Google Livres + Open Library":r.a.length?"Google Livres":"Open Library";
+ show(rankBooks(Q,dedupBooks(r.a.concat(r.o)),A).slice(0,6),src)}
 /* ISBN : nettoyage, ISBN-10 <-> ISBN-13, contrôle de la clé */
 const isbn13c=d=>{let t=0;for(let i=0;i<12;i++)t+=(+d[i])*(i%2?3:1);return(10-t%10)%10};
 const isbn10c=d=>{let t=0;for(let i=0;i<9;i++)t+=(+d[i])*(10-i);const r=(11-t%11)%11;return r===10?"X":String(r)};
@@ -347,7 +345,7 @@ function isbnNorm(v){const c=String(v||"").toUpperCase().replace(/[^0-9X]/g,"");
  if(/^\d{9}[\dX]$/.test(c)){let i13="978"+c.slice(0,9);i13+=isbn13c(i13);return{ok:isbn10c(c)===c[9],i10:c,i13}}
  if(/^\d{13}$/.test(c)){const ok=isbn13c(c)===+c[12];const i10=/^978/.test(c)?c.slice(3,12)+isbn10c(c.slice(3,12)):"";return{ok,i10,i13:c}}
  return null}
-const gbVol=async id=>{try{return gbMap(await fj("https://www.googleapis.com/books/v1/volumes/"+encodeURIComponent(id)))}catch(e){return null}};
+const gbVol=async id=>{try{return gbMap(await fj("https://www.googleapis.com/books/v1/volumes/"+encodeURIComponent(id)+"?country=FR",undefined,9000,1))}catch(e){return null}};
 /* source 1 : Google Livres (ISBN-13 puis ISBN-10 ; le résumé complet est pris dans la fiche détaillée si la liste n'en a pas) */
 async function isbnGB(n){let out=[],err=null;
  for(const q of [n.i13,n.i10].filter(Boolean)){try{const r=await gbSearch("isbn:"+q,3);if(r.length){out=r;break}}catch(e){err=e}}
@@ -355,28 +353,40 @@ async function isbnGB(n){let out=[],err=null;
  if(!out[0].synopsis&&out[0].affiche){const d=await gbVol(out[0].affiche.slice(3));if(d&&d.synopsis)out[0].synopsis=d.synopsis}
  return out}
 /* source 2 : Open Library (fiche de l'édition + fiche de l'œuvre pour le résumé et l'auteur) */
-async function isbnOL(n){let ed=null,err=null;
- for(const q of [n.i13,n.i10].filter(Boolean)){try{ed=await fj("https://openlibrary.org/isbn/"+q+".json");if(ed&&ed.title)break}catch(e){if(!(e&&e.status===404))err=e}}
+/* source 2 : Open Library (fiche de l'édition + fiche de l'œuvre pour le résumé et l'auteur) ; délai court, pas de relance : on ne bloque plus les autres sources */
+async function isbnOL(n){let ed=null,err=null;const f=u=>fj(u,undefined,7000,0);
+ for(const q of [n.i13,n.i10].filter(Boolean)){try{ed=await f("https://openlibrary.org/isbn/"+q+".json");if(ed&&ed.title)break}catch(e){if(!(e&&e.status===404))err=e}}
  if(!ed||!ed.title){if(err)throw err;return[]}
  const tx=v=>v?(typeof v==="string"?v:(v.value||"")):"";let syn=tx(ed.description),au="";
- try{const wk=(ed.works||[])[0];if(wk&&wk.key){const w=await fj("https://openlibrary.org"+wk.key+".json");if(!syn)syn=tx(w.description);
+ try{const wk=(ed.works||[])[0];if(wk&&wk.key){const w=await f("https://openlibrary.org"+wk.key+".json");if(!syn)syn=tx(w.description);
   const ks=(w.authors||[]).map(z=>z.author&&z.author.key).filter(Boolean).slice(0,2);
-  au=(await Promise.all(ks.map(k=>fj("https://openlibrary.org"+k+".json").then(z=>z.name||"").catch(()=>"")))).filter(Boolean).join(", ")}}catch(e){}
+  au=(await Promise.all(ks.map(k=>f("https://openlibrary.org"+k+".json").then(z=>z.name||"").catch(()=>"")))).filter(Boolean).join(", ")}}catch(e){}
  const cov=(ed.covers||[]).find(z=>z>0);
  return[{titre:ed.title+(ed.subtitle?" : "+ed.subtitle:""),realisateur:au,annee:((ed.publish_date||"").match(/\d{4}/)||[""])[0],duree:ed.number_of_pages||"",genre:"",production:(ed.publishers||[])[0]||"",synopsis:htmlTxt(syn),affiche:cov?"ol:"+cov:"",support:"",acteurs:""}]}
-/* un même ISBN = une même édition : on fusionne les sources en une seule fiche (premier champ renseigné gagne) */
+/* source 3 : Open Library, interface « api/books » : un seul appel (titre, auteurs, éditeur, pages), répond vite même quand la source 2 traîne */
+async function isbnOL2(n){const k=[n.i13,n.i10].filter(Boolean).map(v=>"ISBN:"+v).join(","),j=await fj("https://openlibrary.org/api/books?format=json&jscmd=data&bibkeys="+k,undefined,8000,0),d=Object.values(j||{})[0];
+ if(!d||!d.title)return[];
+ return[{titre:d.title+(d.subtitle?" : "+d.subtitle:""),realisateur:(d.authors||[]).map(a=>a.name).filter(Boolean).join(", "),annee:((d.publish_date||"").match(/\d{4}/)||[""])[0],duree:d.number_of_pages||"",genre:"",production:((d.publishers||[])[0]||{}).name||"",synopsis:"",affiche:"",support:"",acteurs:""}]}
+/* un même ISBN = une même édition : les 3 sources partent en parallèle, la fiche s'affiche dès la première réponse, les suivantes complètent seulement les champs encore vides */
+const LATE={fT:"titre",fR:"realisateur",fY:"annee",fD:"duree",fG:"genre",fP:"production",fO:"synopsis"};
+function lateFill(m){for(const id in LATE){const e=$(id),v=m[LATE[id]];if(e&&v&&!String(e.value).trim()){e.value=v;if(id==="fO"&&cur)cur.ov=v}}if(cur&&!cur.pi&&m.affiche)cur.pi=m.affiche}
 async function lookupISBN(raw){const c=String(raw).replace(/[^0-9Xx]/g,""),n=isbnNorm(c);$("sq").value=c;$("sc").innerHTML="";$("ocrl").innerHTML="";
  if(!n){msg("« "+c+" » n'est pas un ISBN valide (10 ou 13 chiffres) : vérifie le code ou cherche par titre.");return false}
- const my=++fseq;msg("ISBN "+n.i13+" : recherche dans Google Livres et Open Library…");
- const rs=await Promise.allSettled([isbnGB(n),isbnOL(n)]);if(my!==fseq)return false;
- const g=rs[0].status==="fulfilled"?rs[0].value:[],o=rs[1].status==="fulfilled"?rs[1].value:[];let ex=[];
- if(!g.length&&!o.length){try{ex=await olSearch("isbn="+n.i13)}catch(e){}}
- const pool=[g[0],o[0],...g.slice(1),...ex].filter(Boolean);
- if(!pool.length){msg(rs.every(r=>r.status==="rejected")?"Recherche impossible ("+netMsg(rs[0].reason)+") : réessaie dans un instant, ou cherche par titre.":"ISBN "+n.i13+" introuvable dans Google Livres et Open Library : cherche par titre, ou remplis la fiche à la main.");return false}
- const m={};pool.forEach(x=>{for(const f in x)if(!m[f]&&x[f])m[f]=x[f]});m.isbn=n.i13;
- const src=[g.length?"Google Livres":"",o.length?"Open Library":"",ex.length?"Open Library":""].filter((v,i,a)=>v&&a.indexOf(v)===i).join(" + ");
- show([m],src+" (ISBN "+n.i13+")");
- if(!n.ok)msg($("sm").textContent+" Attention : la clé de contrôle de cet ISBN est incorrecte, vérifie le code.");
+ const my=++fseq,warn=n.ok?"":" Attention : la clé de contrôle de cet ISBN est incorrecte, vérifie le code.",acc={},names=[],errs=[];let shown=false;
+ const apply=(name,arr)=>{if(my!==fseq||!arr||!arr.length)return;
+  for(const f in arr[0])if(!acc[f]&&arr[0][f])acc[f]=arr[0][f];
+  acc.isbn=n.i13;if(!names.includes(name))names.push(name);
+  if(!shown){shown=true;fill(acc);$("manual").hidden=false;$("manual").open=true;$("sc").innerHTML=""}else lateFill(acc);
+  msg("Fiche proposée par "+names.join(" + ")+" (ISBN "+n.i13+") : relis-la avant d'ajouter."+warn)};
+ const run=(name,fn)=>fn().then(r=>apply(name,r)).catch(e=>{errs.push(e)});
+ msg("ISBN "+n.i13+" : recherche dans Google Livres et Open Library…");
+ await Promise.all([run("Google Livres",()=>isbnGB(n)),run("Open Library",()=>isbnOL(n)),run("Open Library",()=>isbnOL2(n))]);
+ if(my!==fseq)return shown;
+ if(!shown){msg("ISBN "+n.i13+" : deuxième tentative…");
+  await Promise.all([run("Google Livres",()=>gbSearch(n.i13,3)),run("Open Library",()=>olSearch("isbn="+n.i13)),run("Open Library",()=>olSearch("q="+n.i13))]);
+  if(my!==fseq)return shown}
+ if(!shown){cur=Object.assign({},cur,{isbn:n.i13});$("manual").hidden=false;$("manual").open=true;
+  msg((errs.length>=4?"Recherche impossible ("+netMsg(errs[0])+")":"ISBN "+n.i13+" introuvable dans Google Livres et Open Library")+" : l'ISBN est déjà noté dans la fiche, tape le titre et l'auteur, ou lance une recherche par titre."+warn);return false}
  return true}
 /* résumé d'un livre : ISBN (si connu) d'abord, puis recherche par titre ; plusieurs sources, on garde celles qui ont un texte */
 async function bookSyn(t,au,is){const out=[],q=v=>String(v||"").replace(/"/g," ").trim(),jobs=[];
