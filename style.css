@@ -142,3 +142,6 @@ body[data-t=m] .clear-wrap:has(#sdir),body[data-t=m] .clear-wrap:has(#sact),body
 body[data-t=b] .clear-wrap:has(#sdir),body[data-t=b] .clear-wrap:has(#sact),body[data-t=b] #sdir,body[data-t=b] #sact{display:none}
 .it.ro{border-left-color:#d4a017;--fc:#d4a017}.it.bd{border-left-color:#ff7043;--fc:#ff7043}.it.mg{border-left-color:#e91e63;--fc:#e91e63}.it.cx{border-left-color:#3d8bfd;--fc:#3d8bfd}
 .it.je{border-left-color:#43a047;--fc:#43a047}.it.es{border-left-color:#26a69a;--fc:#26a69a}.it.au{border-left-color:#9aa3cc;--fc:#9aa3cc}
+
+/* iPhone : 16 px minimum dans tous les champs, sinon Safari zoome à la saisie (écran « Ce soir » notamment) */
+#sv input,#sv select,.sh input,.sh select,.sh textarea{font-size:16px}

@@ -7,8 +7,8 @@ let quiet=0;const bump=()=>{if(quiet)return;try{localStorage.setItem("mt_chg",(+
 const idb=(m,fn)=>(m==="readwrite"&&bump(),db)?new Promise((res,rej)=>{const tx=db.transaction("films",m),r=fn(tx.objectStore("films"));tx.oncomplete=()=>res(r&&r.result);tx.onerror=tx.onabort=()=>rej(tx.error)}):Promise.reject(new Error("Base de données indisponible"));
 const openDB=()=>new Promise((res,rej)=>{const q=indexedDB.open("mediatheque",2);q.onupgradeneeded=()=>{const d=q.result;if(!d.objectStoreNames.contains("films"))d.createObjectStore("films",{keyPath:"id"});if(!d.objectStoreNames.contains("snap"))d.createObjectStore("snap",{keyPath:"id"})};q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)});
 const storageWriteError=()=>{const n=$("n");if(n)n.textContent="Erreur de sauvegarde — vérifie tes réglages";};
-const put=f=>idb("readwrite",s=>{s.put(f)}).catch(storageWriteError);
-const putMany=a=>idb("readwrite",s=>{a.forEach(f=>s.put(f))}).catch(storageWriteError);
+const put=f=>idb("readwrite",s=>{s.put(f)}).then(()=>true,()=>{storageWriteError();return false});
+const putMany=a=>idb("readwrite",s=>{a.forEach(f=>s.put(f))}).then(()=>true,()=>{storageWriteError();return false});
 /* ---------- utilitaires ---------- */
 const key=s=>String(s||"").toLowerCase().replace(/^(le |la |les |l['’]|un |une |the )/,"").normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 const sk=s=>key(s).replace(/[^a-z0-9]+/g," ").trim();
@@ -64,10 +64,10 @@ function rate(id,v){const f=D.find(x=>x.id===id);if(!f)return;if(v===""||f.n===+
  const c=card(id);if(c){c.querySelector(".rt").innerHTML=rt(f.n);c.querySelector(".nt").textContent=nl(f.n)}
  $("n").textContent=$("n").textContent.replace(/ · \d+ notés?$/,"")+count()}
 async function enrich(f){if(f.k==="m"||f.k==="b"||f.pi||f.eq||!tkey())return false;
- try{const p={query:f.t,language:"fr-FR",include_adult:"false"};const S=f.k==="s";if(f.y)p[S?"first_air_date_year":"year"]=f.y;
-  let r=(await tget(S?"/search/tv":"/search/movie",p)).results||[];
-  if(!r.length&&f.y){delete p[S?"first_air_date_year":"year"];r=(await tget(S?"/search/tv":"/search/movie",p)).results||[]}
-  const m=r.find(x=>f.y&&(x.release_date||x.first_air_date||"").slice(0,4)==String(f.y))||r[0];
+ try{const S=f.k==="s",nms=x=>[x.title,x.original_title,x.name,x.original_name];
+  const r=(await tget(S?"/search/tv":"/search/movie",{query:f.t,language:"fr-FR",include_adult:"false"})).results||[];
+  /* on n'accepte qu'un titre vraiment proche : pas d'affiche plutôt qu'une mauvaise affiche */
+  const sc=r.filter(x=>tmScore(f.t,nms(x))>=60).map(x=>({x,s:rank(f.t,f.y,nms(x),(x.release_date||x.first_air_date||"").slice(0,4),x.vote_count,x.popularity,x.poster_path)})).sort((a,b)=>b.s-a.s),m=(sc[0]||{}).x;
   quiet=1;if(!m||(!m.poster_path&&!m.overview)){f.eq=1;put(f);quiet=0;return false}
   if(m.poster_path)f.pi=m.poster_path;if(m.overview)f.ov=m.overview;put(f);quiet=0;return true}
  catch(e){quiet=0;return false}}
@@ -167,8 +167,9 @@ async function snap(why){if(!D.length)return;try{const all=(await sdb("readonly"
 async function snapUI(){const a=((await sdb("readonly",x=>x.getAll()))||[]).sort((p,q)=>q.id-p.id);
  $("snl").innerHTML=a.length?a.map(x=>`<div class="row"><span style="flex:1;align-self:center;font-size:13.5px">${esc(new Date(x.id).toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}))} · ${x.n} lignes · ${esc(x.why)}</span><button data-r="${x.id}">Restaurer</button></div>`).join(""):'<span class="hint">Aucune pour l\'instant.</span>'}
 $("snl").onclick=async e=>{const b=e.target.closest("[data-r]");if(!b)return;if(!confirm("Restaurer cette version ? L'état actuel sera gardé en secours."))return;
- const x=await sdb("readonly",z=>z.get(+b.dataset.r));if(!x)return;await snap("avant restauration");D=JSON.parse(x.data);clean(D);
- await idb("readwrite",z=>{z.clear();D.forEach(f=>z.put(f))});lists();draw();snapUI();$("sgs").textContent="Version restaurée : "+D.length+" lignes."};
+ try{const x=await sdb("readonly",z=>z.get(+b.dataset.r));if(!x)return;const R=JSON.parse(x.data);if(!Array.isArray(R)||R.some(f=>!f||f.id===undefined))throw new Error("format");
+  await snap("avant restauration");clean(R);await idb("readwrite",z=>{z.clear();R.forEach(f=>z.put(f))});D=R;lists();draw();snapUI();$("sgs").textContent="Version restaurée : "+D.length+" lignes."}
+ catch(err){$("sgs").textContent="Restauration impossible : ta collection actuelle n'a pas été modifiée."}};
 $("enb").onclick=async()=>{if(!tkey()){$("sgs").textContent="Il faut une clé TMDB (voir plus haut).";return}
  const todo=D.filter(x=>!x.pi&&!x.eq);if(!todo.length){$("sgs").textContent="Tout est déjà à jour.";return}
  let i=0,ok=0;$("enb").disabled=true;
@@ -212,47 +213,85 @@ function fill(c){cur={pi:c.affiche||"",ov:c.synopsis||"",seasonEpisodes:c.season
  if(typ==="m"&&!c.synopsis&&(c.affiche||"").startsWith("mb:")){const pi=c.affiche;$("synS").textContent="Récupération des titres…";mbTracks(pi.slice(3)).then(t=>{if(cur.pi!==pi)return;if(t&&!$("fO").value.trim()){$("fO").value=t;cur.ov=t;$("synS").textContent="Titres récupérés sur MusicBrainz."}else $("synS").textContent=""}).catch(()=>{if(cur.pi===pi)$("synS").textContent=""})}}
 function seasonEditor(f){const seasons=f.seasonEpisodes||cur.seasonEpisodes||[];if(!seasons.length){$("seasonPick").innerHTML="";return}
  $("seasonPick").innerHTML='<div class="w2"><b>Saisons possédées</b><div class="hint">Coche uniquement les saisons que tu as.</div></div>'+seasons.map(z=>`<label class="season-choice"><input type="checkbox" value="${z.season}" ${(f.id?!Array.isArray(f.seasonsOwned)||f.seasonsOwned.includes(z.season):Array.isArray(f.seasonsOwned)&&f.seasonsOwned.includes(z.season))?"checked":""}> Saison ${z.season} · ${z.episodes} épisode${z.episodes>1?"s":""}</label>`).join("")}
-function show(a,src){$("sc").innerHTML="";if(!a.length){msg("Rien trouvé : ouvre « Saisie et retouches manuelles » pour créer la fiche, ou relance une recherche par titre.");$("manual").hidden=false;$("manual").open=true;return}
+function show(a,src){a=dedupC(a||[]);$("sc").innerHTML="";if(!a.length){msg("Rien trouvé : ouvre « Saisie et retouches manuelles » pour créer la fiche, ou relance une recherche par titre.");$("manual").hidden=false;$("manual").open=true;return}
  const note="Fiche proposée par "+src+" : relis-la avant d'ajouter.";
  if(a.length===1){fill(a[0]);$("manual").hidden=false;$("manual").open=true;msg(note);return}
  msg("Plusieurs possibilités, touche la bonne :");
- a.forEach(c=>{const b=document.createElement("button");b.className="cd";b.textContent=(c.titre||"?")+(c.annee?" ("+c.annee+")":"")+(c.realisateur?" · "+c.realisateur:"");b.onclick=()=>{fill(c);$("manual").hidden=false;$("manual").open=true;$("sc").innerHTML="";msg(note)};$("sc").append(b)})}
-/* TMDB (clé perso dans les réglages, sinon clé fournie avec l'appli) */
+ a.forEach(c=>{const b=document.createElement("button");b.className="cd";b.textContent=(c.titre||"?")+(c.annee?" ("+c.annee+")":"")+(c.realisateur?" · "+c.realisateur:"")+(c.titreOriginal&&sk(c.titreOriginal)!==sk(c.titre)?" · « "+c.titreOriginal+" »":"");b.onclick=()=>{fill(c);$("manual").hidden=false;$("manual").open=true;$("sc").innerHTML="";msg(note)};$("sc").append(b)})}
+/* ---------- réseau : délai maximal, une relance, erreurs lisibles ---------- */
+let fseq=0;
+async function fj(u,o,ms,tries){tries=tries===undefined?1:tries;
+ for(let i=0;;i++){const c=new AbortController(),t=setTimeout(()=>c.abort(),ms||12000);
+  try{const r=await fetch(u,Object.assign({},o||{},{signal:c.signal}));
+   if(r.ok)return await r.json();
+   const e=new Error("HTTP "+r.status);e.status=r.status;
+   if(i<tries&&(r.status===429||r.status>=500)){await sleep(900*(i+1));continue}
+   throw e}
+  catch(e){if(e&&e.status)throw e;
+   if(i<tries){await sleep(700);continue}
+   if(e&&e.name==="AbortError"){const x=new Error("Délai dépassé");x.timeout=1;throw x}
+   throw e}
+  finally{clearTimeout(t)}}}
+const netMsg=e=>!navigator.onLine?"pas de connexion":e&&e.status===401?"clé TMDB refusée, vérifie-la dans les réglages":e&&e.status===429?"service saturé, réessaie dans un instant":e&&e.timeout?"réponse trop lente":"service indisponible";
+/* ---------- pertinence : score de ressemblance titre / requête, classement, doublons ---------- */
+function tmScore(q,names){const Q=sk(q);if(!Q)return 0;const qt=Q.split(" ");let best=0;
+ for(const n0 of names){const n=sk(n0);if(!n)continue;if(n===Q)return 100;
+  const nt=n.split(" "),c=qt.filter(t=>nt.includes(t)).length;let s=c/Math.max(qt.length,nt.length)*80;
+  if(n.startsWith(Q+" ")||Q.startsWith(n+" "))s=Math.max(s,70);else if((" "+n+" ").includes(" "+Q+" "))s=Math.max(s,60);
+  best=Math.max(best,s)}
+ return best}
+function rank(q,y,names,yr,votes,pop,poster){let s=tmScore(q,names);
+ if(y&&yr){const d=Math.abs(+yr-+y);s+=d===0?30:d===1?10:-15}
+ return s+Math.min(15,Math.log10(1+(votes||0))*4)+Math.min(8,Math.log10(1+(pop||0))*3)+(poster?4:0)}
+const dedupC=a=>{const s=new Set();return a.filter(x=>{const k=sk(x.titre)+"|"+(x.annee||"")+"|"+sk(x.realisateur||"");if(s.has(k))return false;s.add(k);return true})};
+function splitYear(q,y){const m=String(q).match(/^(.+?)\s*[(\[]\s*((?:19|20)\d{2})\s*[)\]]\s*$/);return m?[m[1].trim(),y||m[2]]:[q,y]}
+/* TMDB (clé perso dans les réglages) */
 const TK="mt_tmdb_key";
 const tkey=()=>(localStorage.getItem(TK)||"").trim();
 async function tget(path,p){const k=tkey(),u=new URL("https://api.themoviedb.org/3"+path),h={};
  Object.entries(p||{}).forEach(([a,b])=>u.searchParams.set(a,b));
  if(k.length>40)h.Authorization="Bearer "+k;else u.searchParams.set("api_key",k);
- const r=await fetch(u,{headers:h});if(!r.ok)throw new Error("TMDB "+r.status);return r.json()}
-async function tmdb(q,y){const p={query:q,language:"fr-FR",include_adult:"false"};if(y)p.year=y;
- let res=(await tget("/search/movie",p)).results||[];
- if(!res.length&&y){delete p.year;res=(await tget("/search/movie",p)).results||[]}
- return Promise.all(res.slice(0,3).map(async m=>{const d=await tget("/movie/"+m.id,{language:"fr-FR",append_to_response:"credits"}),cr=d.credits||{};
-  return{titre:d.title||m.title,realisateur:(cr.crew||[]).filter(x=>x.job==="Director").map(x=>x.name).join(", "),duree:d.runtime||"",genre:(d.genres||[]).slice(0,3).map(x=>x.name).join(" / "),annee:(d.release_date||"").slice(0,4),acteurs:(cr.cast||[]).slice(0,5).map(x=>x.name).join(", "),production:(d.production_companies||[]).slice(0,3).map(x=>x.name).join(", ")||"—",affiche:d.poster_path||"",synopsis:d.overview||""}}))}
-/* Wikidata (sans clé, relais) */
+ return fj(u,{headers:h})}
+async function tmdb(q,y){const res=(await tget("/search/movie",{query:q,language:"fr-FR",include_adult:"false"})).results||[];
+ const top=res.map(m=>({m,s:rank(q,y,[m.title,m.original_title],(m.release_date||"").slice(0,4),m.vote_count,m.popularity,m.poster_path)})).sort((a,b)=>b.s-a.s).slice(0,5);
+ return Promise.all(top.map(async({m})=>{
+  try{const d=await tget("/movie/"+m.id,{language:"fr-FR",append_to_response:"credits"}),cr=d.credits||{};
+   return{titre:d.title||m.title,titreOriginal:d.original_title||"",realisateur:(cr.crew||[]).filter(x=>x.job==="Director").map(x=>x.name).join(", "),duree:d.runtime||"",genre:(d.genres||[]).slice(0,3).map(x=>x.name).join(" / "),annee:(d.release_date||"").slice(0,4),acteurs:(cr.cast||[]).slice(0,5).map(x=>x.name).join(", "),production:(d.production_companies||[]).slice(0,3).map(x=>x.name).join(", ")||"—",affiche:d.poster_path||"",synopsis:d.overview||""}}
+  catch(e){return{titre:m.title,titreOriginal:m.original_title||"",realisateur:"",duree:"",genre:"",annee:(m.release_date||"").slice(0,4),acteurs:"",production:"—",affiche:m.poster_path||"",synopsis:m.overview||""}}}))}
+/* Wikidata (sans clé, relais) : titres français ET originaux, films et séries */
 async function wget(p){const u=new URL("https://www.wikidata.org/w/api.php");Object.entries(Object.assign({format:"json",origin:"*"},p)).forEach(([a,b])=>u.searchParams.set(a,b));
- const r=await fetch(u);if(!r.ok)throw new Error("Wikidata "+r.status);return r.json()}
-async function wiki(q,y){const s=(await wget({action:"wbsearchentities",search:q,language:"fr",uselang:"fr",type:"item",limit:10})).search||[];
- let hit=s.filter(x=>/film|long.m[ée]trage|t[ée]l[ée]film/i.test(x.description||""));
- if(y){const w=hit.filter(x=>String(x.description||"").includes(y));if(w.length)hit=w}
- const ids=hit.slice(0,3).map(x=>x.id);if(!ids.length)return[];
+ return fj(u)}
+async function wiki(q,y,kind){const S=kind==="s",
+ re=S?/s[ée]rie|television series|tv series|web series|anim[ée]e?|miniseries/i:/film|long.m[ée]trage|t[ée]l[ée]film|movie/i,
+ sr=l=>wget({action:"wbsearchentities",search:q,language:l,uselang:l,type:"item",limit:10}).then(j=>j.search||[]);
+ const [f,e]=await Promise.all([sr("fr"),sr("en").catch(()=>[])]),seen=new Set(),all=[];
+ [...f,...e].forEach(x=>{if(!seen.has(x.id)){seen.add(x.id);all.push(x)}});
+ const ids=all.filter(x=>re.test(x.description||"")).map(x=>({x,s:rank(q,y,[x.label,x.match&&x.match.text],((String(x.description||"").match(/\b(?:19|20)\d{2}\b/)||[""])[0]),0,0,false)})).sort((a,b)=>b.s-a.s).slice(0,3).map(z=>z.x.id);
+ if(!ids.length)return[];
  const E=(await wget({action:"wbgetentities",ids:ids.join("|"),props:"claims|labels",languages:"fr|en"})).entities||{};
  const val=(c,p)=>(c[p]||[]).map(z=>z.mainsnak&&z.mainsnak.datavalue&&z.mainsnak.datavalue.value).filter(Boolean);
  const qid=(c,p,n)=>val(c,p).filter(v=>v.id).slice(0,n).map(v=>v.id);
- const need=new Set(),rows=ids.map(id=>{const e=E[id],c=e.claims||{},r={e,dir:qid(c,"P57",3),gen:qid(c,"P136",3),act:qid(c,"P161",5),prod:qid(c,"P272",3)};
+ const need=new Set(),rows=ids.filter(id=>E[id]).map(id=>{const e=E[id],c=e.claims||{},dir=S?[...qid(c,"P170",3),...qid(c,"P57",3)].slice(0,3):qid(c,"P57",3),prod=S?[...qid(c,"P449",3),...qid(c,"P272",3)].slice(0,3):qid(c,"P272",3),r={e,dir,gen:qid(c,"P136",3),act:qid(c,"P161",5),prod};
   [...r.dir,...r.gen,...r.act,...r.prod].forEach(i=>need.add(i));return r});
  const L={};if(need.size){const l=(await wget({action:"wbgetentities",ids:[...need].slice(0,50).join("|"),props:"labels",languages:"fr|en"})).entities||{};
   for(const k in l){const lb=l[k].labels||{};L[k]=(lb.fr||lb.en||{}).value||""}}
- const nm=a=>a.map(i=>L[i]).filter(Boolean);
- return rows.map(r=>{const c=r.e.claims||{},lb=r.e.labels||{},t=val(c,"P577")[0],du=val(c,"P2047")[0];
+ const nm=a=>a.map(i=>L[i]).filter(Boolean),num=v=>{const z=v&&v.amount?parseInt(v.amount,10):0;return z>0?z:""};
+ return rows.map(r=>{const c=r.e.claims||{},lb=r.e.labels||{},du=val(c,"P2047")[0];
+  const yrs=[...val(c,S?"P580":"P577"),...(S?val(c,"P577"):[])].map(t=>t&&t.time?(t.time.match(/\d{4}/)||[""])[0]:"").filter(Boolean).map(Number);
   let min="";if(du&&du.amount){const u=du.unit||"",a=parseFloat(du.amount);min=Math.round(/Q25235$/.test(u)?a*60:/Q11574$/.test(u)?a/60:a)}
-  return{titre:(lb.fr||lb.en||{}).value||q,realisateur:nm(r.dir).join(", "),duree:min,genre:nm(r.gen).join(" / "),annee:t&&t.time?(t.time.match(/\d{4}/)||[""])[0]:"",acteurs:nm(r.act).join(", "),production:nm(r.prod).join(", ")||"—"}})}
-async function tmdbTv(q,y){const p={query:q,language:"fr-FR",include_adult:"false"};if(y)p.first_air_date_year=y;
- let res=(await tget("/search/tv",p)).results||[];
- if(!res.length&&y){delete p.first_air_date_year;res=(await tget("/search/tv",p)).results||[]}
- return Promise.all(res.slice(0,3).map(async m=>{const d=await tget("/tv/"+m.id,{language:"fr-FR",append_to_response:"credits"}),cr=d.credits||{},pc=d.production_companies&&d.production_companies.length?d.production_companies:(d.networks||[]);
-  const regularSeasons=(d.seasons||[]).filter(z=>z.season_number>0).sort((a,b)=>a.season_number-b.season_number),seasonEpisodes=[];for(const season of regularSeasons){try{const sd=await tget("/tv/"+m.id+"/season/"+season.season_number,{language:"fr-FR"});seasonEpisodes.push({season:season.season_number,episodes:(sd.episodes||[]).length})}catch(e){seasonEpisodes.push({season:season.season_number,episodes:season.episode_count||0})}}
-  return{titre:d.name||m.name,realisateur:(d.created_by||[]).map(x=>x.name).join(", "),duree:(d.episode_run_time||[])[0]||(d.last_episode_to_air||{}).runtime||"",genre:(d.genres||[]).slice(0,3).map(x=>x.name).join(" / "),annee:(d.first_air_date||"").slice(0,4),acteurs:(cr.cast||[]).slice(0,5).map(x=>x.name).join(", "),production:pc.slice(0,3).map(x=>x.name).join(", ")||"—",affiche:d.poster_path||"",synopsis:d.overview||"",saisons:d.number_of_seasons||"",episodes:d.number_of_episodes||"",seasonEpisodes}}))}
+  const fr=(lb.fr||{}).value,en=(lb.en||{}).value;
+  const o={titre:fr||en||q,titreOriginal:fr&&en&&sk(fr)!==sk(en)?en:"",realisateur:nm(r.dir).join(", "),duree:min,genre:nm(r.gen).join(" / "),annee:yrs.length?String(Math.min(...yrs)):"",acteurs:nm(r.act).join(", "),production:nm(r.prod).join(", ")||"—"};
+  if(S){o.saisons=num(val(c,"P2437")[0]);o.episodes=num(val(c,"P1113")[0])}
+  return o})}
+async function tmdbTv(q,y){const res=(await tget("/search/tv",{query:q,language:"fr-FR",include_adult:"false"})).results||[];
+ const top=res.map(m=>({m,s:rank(q,y,[m.name,m.original_name],(m.first_air_date||"").slice(0,4),m.vote_count,m.popularity,m.poster_path)})).sort((a,b)=>b.s-a.s).slice(0,4);
+ return Promise.all(top.map(async({m},i)=>{
+  try{const d=await tget("/tv/"+m.id,{language:"fr-FR",append_to_response:"credits"}),cr=d.credits||{},pc=d.production_companies&&d.production_companies.length?d.production_companies:(d.networks||[]);
+   const reg=(d.seasons||[]).filter(z=>z.season_number>0).sort((a,b)=>a.season_number-b.season_number);
+   const seasonEpisodes=await Promise.all(reg.map(async s=>{if(i>1)return{season:s.season_number,episodes:s.episode_count||0};
+    try{const sd=await tget("/tv/"+m.id+"/season/"+s.season_number,{language:"fr-FR"});return{season:s.season_number,episodes:(sd.episodes||[]).length}}catch(e){return{season:s.season_number,episodes:s.episode_count||0}}}));
+   return{titre:d.name||m.name,titreOriginal:d.original_name||"",realisateur:(d.created_by||[]).map(x=>x.name).join(", "),duree:(d.episode_run_time||[])[0]||(d.last_episode_to_air||{}).runtime||"",genre:(d.genres||[]).slice(0,3).map(x=>x.name).join(" / "),annee:(d.first_air_date||"").slice(0,4),acteurs:(cr.cast||[]).slice(0,5).map(x=>x.name).join(", "),production:pc.slice(0,3).map(x=>x.name).join(", ")||"—",affiche:d.poster_path||"",synopsis:d.overview||"",saisons:d.number_of_seasons||"",episodes:d.number_of_episodes||"",seasonEpisodes}}
+  catch(e){return{titre:m.name,titreOriginal:m.original_name||"",realisateur:"",duree:"",genre:"",annee:(m.first_air_date||"").slice(0,4),acteurs:"",production:"—",affiche:m.poster_path||"",synopsis:m.overview||"",saisons:"",episodes:"",seasonEpisodes:null}}}))}
 function musicUI(M){SUP=M?SUPM:SUPF;sup.clear();const o=a=>a.map(v=>"<option>"+v+"</option>").join("");
  $("su").innerHTML='<option value="">Tous les supports</option>'+o(SUP);$("fS").innerHTML=o(SUP);
  $("s").querySelector("option[value=r]").textContent=M?"Artiste":"Réalisateur";
@@ -271,16 +310,23 @@ const gbMap=v=>{const i=v.volumeInfo||{},cat=(i.categories||[]).join(" / "),low=
  const gen=[...new Set(cat.split(/\s*\/\s*/).map(c=>GBC[c]).filter(Boolean))].slice(0,3).join(" / ");
  const sup=/manga/.test(low)?"Manga":/comics|graphic/.test(low)?"BD":/juvenile|children/.test(low)?"Jeunesse":/fiction|novel|literary/.test(low)?"Roman":/biograph|history|science|philosoph|psycholog|business|self-help/.test(low)?"Essai":"";
  return{titre:(i.title||"")+(i.subtitle?" : "+i.subtitle:""),realisateur:(i.authors||[]).join(", "),annee:(i.publishedDate||"").slice(0,4),duree:i.pageCount||"",genre:gen,production:i.publisher||"",synopsis:htmlTxt(i.description),affiche:i.imageLinks&&v.id?"gb:"+v.id:"",support:sup,acteurs:""}};
-async function gbSearch(q,n){const r=await fetch("https://www.googleapis.com/books/v1/volumes?printType=books&maxResults="+(n||8)+"&q="+encodeURIComponent(q));if(!r.ok)throw new Error("GB "+r.status);const j=await r.json();return(j.items||[]).map(gbMap).filter(x=>x.titre)}
-async function olSearch(p){const r=await fetch("https://openlibrary.org/search.json?limit=8&fields=title,author_name,first_publish_year,number_of_pages_median,publisher,cover_i&"+p);if(!r.ok)throw new Error("OL "+r.status);const j=await r.json();
+async function gbSearch(q,n){const j=await fj("https://www.googleapis.com/books/v1/volumes?printType=books&maxResults="+(n||8)+"&q="+encodeURIComponent(q));return(j.items||[]).map(gbMap).filter(x=>x.titre)}
+async function olSearch(p){const j=await fj("https://openlibrary.org/search.json?limit=8&fields=title,author_name,first_publish_year,number_of_pages_median,publisher,cover_i&"+p);
  return(j.docs||[]).map(d=>({titre:d.title||"",realisateur:(d.author_name||[]).slice(0,3).join(", "),annee:d.first_publish_year?String(d.first_publish_year):"",duree:d.number_of_pages_median||"",genre:"",production:(d.publisher||[])[0]||"",synopsis:"",affiche:d.cover_i?"ol:"+d.cover_i:"",support:"",acteurs:""})).filter(x=>x.titre)}
-const dedupBooks=a=>{const s=new Set();return a.filter(x=>{const k=sk(x.titre+" "+x.realisateur);if(s.has(k))return false;s.add(k);return true})};
+/* doublons : même titre + même auteur (nom de famille) ; on fusionne les infos des deux sources */
+const dedupBooks=a=>{const m=new Map();a.forEach(x=>{const pa=sk(String(x.realisateur||"").split(",")[0]).split(" ").filter(Boolean),au=(pa.pop()||"")+(pa.length?pa[0][0]:""),k=sk(x.titre)+"|"+au,o=m.get(k);
+ if(!o)m.set(k,Object.assign({},x));else for(const f in x)if(!o[f]&&x[f])o[f]=x[f]});return[...m.values()]};
+const rankBooks=(q,a)=>{const qt=sk(q).split(" ").filter(Boolean);return a.map((x,i)=>{const hay=sk(x.titre+" "+x.realisateur).split(" "),cov=qt.filter(t=>hay.includes(t)).length/Math.max(1,qt.length);
+ return{x,s:cov*60+tmScore(q,[x.titre])*.4+(x.affiche?3:0)+(x.synopsis?2:0)+(x.duree?1:0)-i*.3}}).sort((p,r)=>r.s-p.s).map(z=>z.x)};
 async function findBook(q){$("sc").innerHTML="";const c=q.replace(/[\s-]/g,"");
  if(/^(\d{13}|\d{9}[\dXx])$/.test(c)){await lookupISBN(c);return}
- msg("Recherche en cours…");let a=[],src="Google Livres";
- try{a=await gbSearch(q)}catch(e){a=[]}
- if(!a.length){try{a=await olSearch("q="+encodeURIComponent(q));src="Open Library"}catch(e){msg(navigator.onLine?"Recherche impossible pour l'instant : remplis la fiche à la main.":"Pas de connexion : remplis la fiche à la main.");return}}
- show(dedupBooks(a).slice(0,6),src)}
+ const my=++fseq;msg("Recherche en cours…");let a=[],o=[],ge=null,oe=null;
+ try{a=await gbSearch(q,10)}catch(e){ge=e}
+ if(a.length<4){try{o=await olSearch("q="+encodeURIComponent(q))}catch(e){oe=e}}
+ if(my!==fseq)return;
+ if(ge&&oe){msg("Recherche impossible ("+netMsg(ge)+") : remplis la fiche à la main.");return}
+ const src=a.length&&o.length?"Google Livres + Open Library":a.length?"Google Livres":"Open Library";
+ show(rankBooks(q,dedupBooks(a.concat(o))).slice(0,6),src)}
 async function lookupISBN(c){c=String(c).replace(/[^0-9Xx]/g,"");$("sq").value=c;$("sc").innerHTML="";msg("ISBN "+c+" : recherche…");
  try{let a=[],src="Google Livres";try{a=await gbSearch("isbn:"+c)}catch(e){}
   if(!a.length){try{a=await olSearch("isbn="+c);src="Open Library"}catch(e){}}
@@ -320,7 +366,7 @@ async function scanCode(){let done=false,last="",hits=0;$("bm").textContent="Vis
      try{ok(rd.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(cv)))).getText())}catch(e){}}setTimeout(tick,120)};tick()}}
  catch(e){bsClose();msg("Caméra indisponible : autorise-la dans les réglages du navigateur, ou tape le code-barres dans la recherche.")}}
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-async function mbget(u,t=2){for(let i=0;i<=t;i++){const r=await fetch(u);if(r.ok)return r.json();if(r.status!==503&&r.status!==429)throw new Error(r.status);await sleep(1200)}throw new Error("MB")}
+async function mbget(u,t=2){return fj(u,undefined,12000,t)}
 async function lookupBC(c){if(typ==="b"){await lookupISBN(c);return}c=String(c).replace(/\D/g,"");$("sq").value=c;$("sc").innerHTML="";msg("Code "+c+" : recherche…");
  /* UPC (12) et EAN (13 avec 0 devant) sont le même code : on essaie les deux écritures */
  const vars=[...new Set([c,c.length===12?"0"+c:"",c.length===13&&c[0]==="0"?c.slice(1):""].filter(Boolean))];
@@ -341,22 +387,41 @@ async function mbTracks(rg){const j=await mbget("https://musicbrainz.org/ws/2/re
  for(const r of rs.slice(0,3)){await sleep(1100);const d=await mbget("https://musicbrainz.org/ws/2/release/"+r.id+"?inc=recordings&fmt=json",1),md=d.media||[];if(!md.some(m=>(m.tracks||[]).length))continue;
   return md.map((m,i)=>{const t=(m.tracks||[]).map(x=>x.title||(x.recording||{}).title||"").filter(Boolean);return(md.length>1?"## "+(m.title||"Disque "+(i+1))+"\n":"")+t.join("\n")}).join("\n")}
  return""}
-async function mbz(q,y){const c=q.replace(/[+\-&|!(){}\[\]^"~*?:\\\/]/g," ").trim(),u=new URL("https://musicbrainz.org/ws/2/release-group/");
- u.searchParams.set("query","(releasegroup:("+c+") OR artist:("+c+"))"+(y?" AND firstreleasedate:"+y:""));u.searchParams.set("fmt","json");u.searchParams.set("limit","6");
- const r=await fetch(u);if(!r.ok)throw new Error("MusicBrainz "+r.status);const j=await r.json();
- return(j["release-groups"]||[]).map(x=>({titre:x.title,realisateur:(x["artist-credit"]||[]).map(a=>a.name).join(", "),annee:(x["first-release-date"]||"").slice(0,4),genre:(x.tags||[]).sort((a,b)=>b.count-a.count).slice(0,3).map(t=>t.name).join(" / "),affiche:"mb:"+x.id,production:"",duree:"",acteurs:"",synopsis:""}))}
-async function find(q,y){if(typ==="b"){await findBook(q);return}if(view==="w"&&typ==="m"){msg("Recherche de l’artiste…");try{const ar=await mbget("https://musicbrainz.org/ws/2/artist/?query="+encodeURIComponent(q)+"&fmt=json&limit=1"),artist=(ar.artists||[])[0];if(artist){const rg=await mbget("https://musicbrainz.org/ws/2/release-group/?artist="+artist.id+"&fmt=json&limit=20"),works=(rg["release-groups"]||[]).map(v=>({titre:v.title,annee:(v["first-release-date"]||"").slice(0,4),realisateur:artist.name,genre:(v.tags||[]).slice(0,3).map(z=>z.name).join(" / "),affiche:"mb:"+v.id,synopsis:"",support:"CD"}));if(works.length){show(works,"albums de "+artist.name);return}}}catch(e){}}
- if(view==="w"&&(typ==="f"||typ==="s")){msg("Recherche du titre ou de la personne…");try{const people=(await tget("/search/person",{query:q,language:"fr-FR",include_adult:"false"})).results||[];if(people.length){const person=people[0],credits=await tget("/person/"+person.id+"/combined_credits",{language:"fr-FR"}),all=[...(credits.cast||[]),...(credits.crew||[])].filter((v,i,a)=>a.findIndex(z=>z.id===v.id)===i).sort((a,b)=>(b.release_date||b.first_air_date||"").localeCompare(a.release_date||a.first_air_date||"")).slice(0,20).map(v=>({titre:v.title||v.name,annee:(v.release_date||v.first_air_date||"").slice(0,4),realisateur:person.name,genre:"",affiche:v.poster_path||"",synopsis:v.overview||"",saisons:"",episodes:""}));if(all.length){show(all,"Œuvres de "+person.name);return}}}catch(e){}}
- if(typ==="m"&&/^[\d\s-]{8,16}$/.test(q)&&ean(q.replace(/\D/g,""))){lookupBC(q);return}msg("Recherche en cours…");$("sc").innerHTML="";let a=[],src="";
- if(typ==="m"){try{a=await mbz(q,y)}catch(e){msg(navigator.onLine?"Recherche impossible pour l'instant : remplis la fiche à la main.":"Pas de connexion : remplis la fiche à la main.");return}show(a,"MusicBrainz");return}
- if(tkey()){try{a=await(typ==="s"?tmdbTv:tmdb)(q,y);src="TMDB"}catch(e){a=[]}}
- if(!a.length&&typ!=="s"){try{a=await wiki(q,y);src="Wikidata"}catch(e){msg(navigator.onLine?"Recherche impossible pour l'instant : remplis la fiche à la main.":"Pas de connexion : remplis la fiche à la main.");return}}
- show(a,src)}
+const MBX=/live|compilation|soundtrack|remix|demo|mixtape|dj-mix|interview|spokenword|audiobook/i;
+async function mbz(q,y){const c=q.replace(/[+\-&|!(){}\[\]^"~*?:\\\/]/g," ").replace(/\s+/g," ").trim();if(!c)return[];
+ const u=new URL("https://musicbrainz.org/ws/2/release-group/");
+ u.searchParams.set("query","(releasegroup:("+c+") OR artist:("+c+"))"+(y?" AND firstreleasedate:"+y:""));u.searchParams.set("fmt","json");u.searchParams.set("limit","15");
+ const j=await mbget(u),qt=sk(c).split(" ").filter(Boolean);
+ const rows=(j["release-groups"]||[]).map(x=>{const art=(x["artist-credit"]||[]).map(a=>a.name).join(", "),hay=sk(x.title+" "+art).split(" "),cov=qt.filter(t=>hay.includes(t)).length/Math.max(1,qt.length),pt=x["primary-type"]||"",st=(x["secondary-types"]||[]).join(" "),yr=(x["first-release-date"]||"").slice(0,4);
+  let s=(x.score||0)*.4+cov*50+(sk(x.title)===sk(c)?25:0)+(pt==="Album"?15:pt==="EP"?5:pt==="Single"?-12:0)-(st&&!MBX.test(c)?15:0);
+  if(y&&yr)s+=+yr===+y?20:Math.abs(yr-y)===1?6:0;
+  return{s,v:{titre:x.title,realisateur:art,annee:yr,genre:(x.tags||[]).sort((a,b)=>b.count-a.count).slice(0,3).map(t=>t.name).join(" / "),affiche:"mb:"+x.id,production:"",duree:"",acteurs:"",synopsis:""}}}).sort((a,b)=>b.s-a.s);
+ return dedupC(rows.map(r=>r.v)).slice(0,6)}
+async function find(q,y){const my=++fseq,ms2=t=>{if(my===fseq)msg(t)},sh2=(a,s)=>{if(my===fseq)show(a,s)};
+ if(typ==="f"||typ==="s"){const r=splitYear(q,y);q=r[0];y=r[1]}
+ if(typ==="b"){await findBook(q);return}
+ if(view==="w"&&typ==="m"){ms2("Recherche de l’artiste…");
+  try{const ar=await mbget("https://musicbrainz.org/ws/2/artist/?query="+encodeURIComponent(q)+"&fmt=json&limit=5"),list=ar.artists||[],artist=list.find(z=>sk(z.name)===sk(q))||list[0];
+   if(artist){const rg=await mbget("https://musicbrainz.org/ws/2/release-group/?artist="+artist.id+"&type="+encodeURIComponent("album|ep")+"&fmt=json&limit=50"),
+    works=(rg["release-groups"]||[]).slice().sort((a,b)=>String(b["first-release-date"]||"").localeCompare(String(a["first-release-date"]||""))).map(v=>({titre:v.title,annee:(v["first-release-date"]||"").slice(0,4),realisateur:artist.name,genre:(v.tags||[]).slice(0,3).map(z=>z.name).join(" / "),affiche:"mb:"+v.id,synopsis:"",support:"CD"}));
+    if(works.length){sh2(works.slice(0,25),"albums de "+artist.name);return}}}catch(e){}}
+ if(view==="w"&&(typ==="f"||typ==="s")){ms2("Recherche du titre ou de la personne…");
+  try{const people=(await tget("/search/person",{query:q,language:"fr-FR",include_adult:"false"})).results||[],person=people.find(z=>tmScore(q,[z.name])>=80);
+   if(person){const credits=await tget("/person/"+person.id+"/combined_credits",{language:"fr-FR"}),all=[...(credits.cast||[]),...(credits.crew||[])].filter((v,i,a)=>a.findIndex(z=>z.id===v.id)===i).sort((a,b)=>(b.release_date||b.first_air_date||"").localeCompare(a.release_date||a.first_air_date||"")).slice(0,20).map(v=>({titre:v.title||v.name,annee:(v.release_date||v.first_air_date||"").slice(0,4),realisateur:person.name,genre:"",affiche:v.poster_path||"",synopsis:v.overview||"",saisons:"",episodes:""}));
+    if(all.length){sh2(all,"Œuvres de "+person.name);return}}}catch(e){}}
+ if(typ==="m"&&/^[\d\s-]{8,16}$/.test(q)&&ean(q.replace(/\D/g,""))){lookupBC(q);return}
+ ms2("Recherche en cours…");$("sc").innerHTML="";
+ if(typ==="m"){let a;try{a=await mbz(q,y)}catch(e){ms2("Recherche impossible ("+netMsg(e)+") : remplis la fiche à la main.");return}sh2(a,"MusicBrainz");return}
+ let a=[],src="",te=null;
+ if(tkey()){try{a=await(typ==="s"?tmdbTv:tmdb)(q,y);src="TMDB"}catch(e){a=[];te=e}}
+ if(!a.length){try{a=await wiki(q,y,typ==="s"?"s":"f");src="Wikidata"}catch(e){ms2("Recherche impossible ("+netMsg(e)+") : remplis la fiche à la main.");return}}
+ sh2(a,src);
+ if(te&&my===fseq)$("sm").textContent+=" (TMDB indisponible : "+netMsg(te)+")"}
 /* Scan photo : Gemini ne renvoie que le titre (1 petit appel), la fiche vient de TMDB/Wikidata */
 async function scan(blob){const k=localStorage.getItem(KEY);if(!k){openSettings("Pour scanner une jaquette, colle d'abord ta clé Gemini (gratuite). Sinon, cherche par titre.");return}
  msg("Lecture de la jaquette…");$("sc").innerHTML="";
  try{const mod=localStorage.getItem(MOD)||DEF_MOD,txt=typ==="b"?"Voici la photo d'une couverture de livre ou de BD. Lis le titre et le nom de l'auteur. Réponds uniquement en JSON : {\"titre\":\"titre du livre\",\"artiste\":\"auteur\",\"annee\":0,\"support\":\"Roman, BD, Manga, Comics, Jeunesse ou Essai si évident, sinon vide\"}":typ==="m"?"Voici la photo d'une pochette d'album (vinyle, CD ou K7). Lis le titre de l'album et le nom de l'artiste. Réponds uniquement en JSON : {\"titre\":\"titre de l'album\",\"artiste\":\"artiste\",\"annee\":année si visible sinon 0,\"support\":\"Vinyle, CD ou K7 si visible, sinon vide\"}":"Voici la photo d'une jaquette de DVD ou Blu-ray. Lis le titre du film ou de la série. Réponds uniquement en JSON : {\"titre\":\"titre lu sur la jaquette\",\"annee\":année si visible sinon 0,\"support\":\"DVD ou Blu-ray si visible, sinon vide\"}";
-  const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(mod)+":generateContent?key="+encodeURIComponent(k),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:[{inline_data:{mime_type:"image/jpeg",data:await b64(blob)}},{text:txt}]}],generationConfig:{responseMimeType:"application/json",temperature:0,maxOutputTokens:1024}})});
+  const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(mod)+":generateContent?key="+encodeURIComponent(k),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:[{inline_data:{mime_type:"image/jpeg",data:await b64(blob)}},{text:txt}]}],generationConfig:{responseMimeType:"application/json",temperature:0,maxOutputTokens:1024}}),signal:AbortSignal.timeout?AbortSignal.timeout(45000):undefined});
   if(!r.ok){let d="";try{const e=await r.json();d=(e.error&&e.error.message)||""}catch(_){}
    msg(r.status===429?"Quota Google épuisé pour l'instant : tape le titre dans la recherche (ça ne consomme rien).":"Erreur Google ("+r.status+") : "+d.slice(0,120)+" — tu peux chercher par titre.");return}
   const j=await r.json(),c=(j.candidates||[])[0];
@@ -366,7 +431,7 @@ async function scan(blob){const k=localStorage.getItem(KEY);if(!k){openSettings(
   if(!o||!o.titre){msg("Titre illisible sur la photo : tape-le dans la recherche.");return}
   $("sq").value=o.titre+((typ==="m"||typ==="b")&&o.artiste?" "+o.artiste:"");await find($("sq").value,typ==="m"||typ==="b"?"":(parseInt(o.annee,10)||""));
   if(SUP.includes(o.support))$("fS").value=o.support}
- catch(e){msg(navigator.onLine?"Échec : "+((e&&e.message)||e):"Pas de connexion : remplis la fiche à la main.")}}
+ catch(e){msg(navigator.onLine?(e&&(e.name==="TimeoutError"||e.name==="AbortError")?"La lecture a pris trop de temps : cherche par titre.":"Échec : "+((e&&e.message)||e)):"Pas de connexion : remplis la fiche à la main.")}}
 const b64=b=>new Promise((a,r)=>{const f=new FileReader();f.onload=()=>a(String(f.result).split(",")[1]);f.onerror=r;f.readAsDataURL(b)});
 async function shrink(file){const u=URL.createObjectURL(file);const im=new Image();await new Promise((a,b)=>{im.onload=a;im.onerror=b;im.src=u});
  const k=Math.min(1,1280/Math.max(im.width,im.height));const c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
@@ -435,10 +500,10 @@ $("imf").onchange=async()=>{const file=$("imf").files[0];$("imf").value="";if(!f
    const n=pn(g(r,"n")),old=byId.get(id)||byCanonical.get(canonical(f));if(old)f.id=old.id;
    if(old){if(n===undefined&&old.n!==undefined)f.n=old.n;if(old.v)f.v=old.v;const imported=Object.fromEntries(Object.entries(f).filter(([k,v])=>k==="id"||(v!==""&&v!==undefined&&v!==null)));Object.assign(old,imported);if(n!==undefined)old.n=n;batch.push(old);upd++}
    else{if(n!==undefined)f.n=n;D.push(f);byId.set(f.id,f);byCanonical.set(canonical(f),f);batch.push(f);add++}});
-  await putMany(batch);lists();draw();$("sgs").textContent="Import terminé : "+add+" ajouté"+(add>1?"s":"")+", "+upd+" mis à jour."}
+  const okW=await putMany(batch);lists();draw();$("sgs").textContent=okW?"Import terminé : "+add+" ajouté"+(add>1?"s":"")+", "+upd+" mis à jour.":"Import affiché mais NON enregistré (erreur de stockage) : ne ferme pas l'appli et exporte une sauvegarde."}
  catch(e){$("sgs").textContent="Fichier illisible : il faut un CSV avec au moins une colonne « Titre »."}};
 $("clr").onclick=async()=>{if(!D.length)return;if(!confirm("Vider toute la collection de cet appareil ? Une version de secours sera gardée."))return;await snap("avant vidage");
- D=[];await idb("readwrite",s=>{s.clear()}).catch(()=>{});lists();draw();$("sgs").textContent="Collection vidée."};
+ try{await idb("readwrite",s=>{s.clear()});D=[];lists();draw();$("sgs").textContent="Collection vidée."}catch(e){$("sgs").textContent="Impossible de vider la collection (erreur de stockage) : rien n'a été supprimé."}};
 {const p=$("spl");if(p){p.addEventListener("animationend",e=>{if(e.animationName==="splo")p.remove()});p.onclick=()=>p.remove();setTimeout(()=>p.remove(),3000)}}
 /* ---------- démarrage ---------- */
 (async()=>{
