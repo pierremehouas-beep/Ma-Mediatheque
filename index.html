@@ -14,29 +14,35 @@
 <div id="cf" hidden role="alertdialog" aria-modal="true" aria-label="Confirmer le retrait"><div class="sh"><h2>Retirer ce film ?</h2><p id="cp"></p><div class="row"><button id="cn" style="flex:1">Annuler</button><button id="cy" class="bad" style="flex:1">Retirer</button></div></div></div>
 <div id="ts" hidden><span id="tt"></span><button id="tu">Annuler</button></div>
 <div id="ad" hidden role="dialog" aria-modal="true" aria-label="Ajouter un film"><div class="sh"><div class="hd"><h2>Ajouter un film</h2><button id="ax">Fermer</button></div>
-<div class="row"><button id="cam" class="pri" style="flex:1">📷 Photographier la jaquette</button></div><div class="row" id="bcr" hidden><button id="bc" class="pri" style="flex:1">▥ Scanner le code-barres</button></div><input id="ph" type="file" accept="image/*" capture="environment" hidden>
+<div class="row"><button id="cam" class="pri" style="flex:1">📷 Photographier la jaquette</button></div><div class="row" id="bcr" hidden><button id="bc" class="pri" style="flex:1">▥ Scanner le code-barres</button></div><input id="ph" type="file" accept="image/*" capture="environment" hidden><p class="hint" id="camh">Astuce : cadre le code-barres (dos de la boîte) pour retrouver l'édition exacte. Sinon, l'appli lit le titre sur la face avant.</p>
 <div class="row"><div class="clear-wrap"><input id="sq" type="search" placeholder="Ou cherche par titre" autocomplete="off"><button type="button" class="clear-search" data-clear="sq" aria-label="Effacer la recherche">×</button></div><button id="sb">Chercher</button></div>
-<div id="sm"></div><div id="sc"></div>
+<div id="sm"></div><div id="sc"></div><div id="ocrl"></div>
 <details id="manual"><summary>✎ Saisie et retouches manuelles</summary><div class="gr"><input id="fT" class="w2" placeholder="Titre"><input id="fR" placeholder="Réalisateur"><input id="fY" inputmode="numeric" placeholder="Année"><input id="fD" inputmode="numeric" placeholder="Durée (min)"><select id="fS"><option>DVD</option><option>Blu-ray</option><option>4K UHD</option><option>Fichier numérique</option></select><input id="fG" class="w2" placeholder="Genre (ex. Comédie / Action)"><input id="fA" class="w2" placeholder="Acteurs principaux"><input id="fP" class="w2" placeholder="Maison de production"><textarea id="fO" class="w2" rows="4" placeholder="Synopsis" style="width:100%;min-height:90px;font-size:16px"></textarea><div class="w2 synr"><button type="button" id="syn">↻ Récupérer le synopsis</button><button type="button" id="synA">Allociné ↗</button><div id="synS" class="hint"></div></div><input id="fNs" class="ser" inputmode="numeric" placeholder="Saisons"><input id="fNe" class="ser" inputmode="numeric" placeholder="Épisodes"></div><div id="seasonPick"></div></details>
 <div class="row"><button id="fok" class="pri" style="flex:1">Ajouter à ma collection</button></div></div></div>
 <div id="bs" hidden role="dialog" aria-modal="true" aria-label="Scanner un code-barres"><video id="bv" playsinline muted></video><div id="bm"></div><button id="bx">Fermer</button></div>
 <div id="sg" hidden role="dialog" aria-modal="true" aria-label="Réglages"><div class="sh"><div class="hd"><h2>Réglages</h2><button id="gx">Fermer</button></div>
-<p class="hint"><b>Recherche de films</b><br>La recherche fonctionne sans clé (Wikidata). Pour des fiches plus complètes, tu peux ajouter ta propre clé TMDB gratuite : <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener" style="color:var(--gold)">créer ma clé</a> (compte gratuit, puis « Clé API »).</p>
+<p id="sgs" class="hint"></p>
+<details class="acc" id="acT"><summary>🎬 Recherche de film</summary><div class="accb">
+<p class="hint">La recherche fonctionne sans clé (Wikidata). Pour des fiches plus complètes, tu peux ajouter ta propre clé TMDB gratuite : <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener" style="color:var(--gold)">créer ma clé</a> (compte gratuit, puis « Clé API »).</p>
 <div class="row"><input id="tk" type="password" placeholder="Clé TMDB (optionnel)" autocomplete="off" autocapitalize="off" spellcheck="false"><button id="tks" class="pri">Enregistrer</button></div>
-<div id="tk2" class="hint"></div>
-<p class="hint" style="margin-top:16px"><b>Scan de jaquettes (optionnel)</b><br>Clé gratuite Google Gemini (aistudio.google.com). Elle sert seulement à lire le titre sur la photo ; la fiche vient ensuite de TMDB/Wikidata. Sans clé, cherche par titre.</p>
+<div id="tk2" class="hint"></div></div></details>
+<details class="acc" id="acG"><summary>📷 Scan de jaquette</summary><div class="accb">
+<p class="hint">Sans clé, l'appli lit déjà le texte de la photo sur ton appareil (gratuit, sans compte), et le code-barres s'il est visible. Avec une clé Google Gemini gratuite, la lecture du titre est bien plus fiable : <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--gold)">créer ma clé sur Google AI Studio</a> (compte Google, puis « Create API key »). La clé sert seulement à lire la photo ; la fiche vient ensuite de TMDB, Wikidata, Google Livres ou MusicBrainz.</p>
 <div class="row"><input id="kk" type="password" placeholder="Colle ta clé API ici" autocomplete="off" autocapitalize="off" spellcheck="false"><button id="ks" class="pri">Enregistrer</button></div>
 <div class="row"><input id="km" placeholder="Modèle Gemini" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
-<div id="km2" class="hint"></div>
-<p class="hint" style="margin-top:16px"><b>Partager</b><br>Envoie l'appli à tes potes : ils l'ouvrent, l'ajoutent à l'écran d'accueil (sur Android ou PC : menu du navigateur → « Installer l'application »), et c'est parti.</p>
+<div id="km2" class="hint"></div></div></details>
+<details class="acc" id="acP"><summary>📤 Partager</summary><div class="accb">
+<p class="hint">Envoie l'appli à tes potes : ils l'ouvrent, l'ajoutent à l'écran d'accueil (sur Android ou PC : menu du navigateur → « Installer l'application »), et c'est parti.</p>
 <div class="row"><button id="sh" class="pri" style="flex:1">Partager l'appli</button></div>
-<div class="row" id="instr" hidden><button id="inst" class="pri" style="flex:1">Installer l'appli sur cet appareil</button></div>
-<p class="hint" style="margin-top:16px"><b>Sauvegarde</b><br>Ta collection vit dans la mémoire de ce navigateur : exporte un CSV de temps en temps. Sur iPhone : Réglages → Apps → Safari → Téléchargements, puis choisis un dossier dédié dans Fichiers pour les téléchargements de Safari.</p>
-<div class="row"><button id="ex" style="flex:1">Exporter en CSV</button><button id="im" style="flex:1">Importer un CSV</button></div><input id="imf" type="file" accept=".csv,text/csv,text/plain,.txt" hidden>
-<p class="hint" style="margin-top:16px"><b>Versions de secours</b><br>Copies automatiques gardées sur cet appareil (5 max) : une par jour, et avant chaque import, vidage ou restauration.</p><div id="snl"></div>
-<p class="hint" style="margin-top:16px"><b>Affiches et synopsis</b><br>Les récupère pour tous les films déjà dans ta collection (via TMDB). Un titre ambigu peut tomber sur le mauvais film : relis les affiches.</p>
-<div class="row"><button id="enb" style="flex:1">Récupérer les affiches</button></div>
-<p id="sgs" class="hint"></p>
-<p class="hint" style="font-size:12px">Données : TMDB (ce produit utilise l'API TMDB mais n'est ni approuvé ni certifié par TMDB) et Wikidata (CC0).</p>
+<div class="row" id="instr" hidden><button id="inst" class="pri" style="flex:1">Installer l'appli sur cet appareil</button></div></div></details>
+<details class="acc" id="acS"><summary>💾 Sauvegarder</summary><div class="accb">
+<p class="hint">Ta collection vit dans la mémoire de ce navigateur : exporte un CSV de temps en temps. Sur iPhone : Réglages → Apps → Safari → Téléchargements, puis choisis un dossier dédié dans Fichiers pour les téléchargements de Safari.</p>
+<div class="row"><button id="ex" style="flex:1">Exporter en CSV</button><button id="im" style="flex:1">Importer un CSV</button></div><input id="imf" type="file" accept=".csv,text/csv,text/plain,.txt" hidden></div></details>
+<details class="acc" id="acV"><summary>🕘 Versions de secours</summary><div class="accb">
+<p class="hint">Copies automatiques gardées sur cet appareil (5 max) : une par jour, et avant chaque import, vidage ou restauration.</p><div id="snl"></div></div></details>
+<details class="acc" id="acA"><summary>🖼️ Affiches et synopsis</summary><div class="accb">
+<p class="hint">Les récupère pour tous les films déjà dans ta collection (via TMDB). Un titre ambigu peut tomber sur le mauvais film : relis les affiches.</p>
+<div class="row"><button id="enb" style="flex:1">Récupérer les affiches</button></div></div></details>
+<p class="hint" style="font-size:12px;margin-top:14px">Données : TMDB (ce produit utilise l'API TMDB mais n'est ni approuvé ni certifié par TMDB), Wikidata (CC0), Google Livres, Open Library et MusicBrainz.</p>
 <button id="clr" class="z0" style="width:100%;margin-top:6px">Vider la collection</button><p class="cr">© El Pedro - PopCruz Production</p></div></div>
 <script src="./app.js" defer></script></body></html>

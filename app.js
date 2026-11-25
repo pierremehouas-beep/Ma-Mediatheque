@@ -36,8 +36,11 @@ const rt=v=>{v=v||0;let h="";for(let i=1;i<=5;i++){const d=Math.max(0,Math.min(1
 const count=()=>{const k=D.filter(x=>isT(x)&&x.n!==undefined).length;return k?" · "+k+" noté"+(k>1?"s":""):""};
 const card=id=>[...$("l").children].find(c=>c.dataset.id===id);
 let view="c",typ="f",grid=false;try{grid=localStorage.getItem("mt_grid")==="1"}catch(e){}
+let gcols=3;try{gcols=Math.max(1,Math.min(5,parseInt(localStorage.getItem("mt_gcols"),10)||3))}catch(e){}
+const gridOn=()=>grid&&(view==="c"||view==="w"),tq=new Set();
+const OPA=$("s").querySelector("option[value=a]"),setOptA=v=>{const S=$("s");if(v){if(!OPA.isConnected)S.insertBefore(OPA,S.querySelector("option[value=p]"))}else if(OPA.isConnected){if(S.value==="a")S.value="t";OPA.remove()}};
 const isT=x=>(x.k||"f")===typ,own=x=>x.seasonsOwned?x.seasonsOwned.length:(x.ownedSeasons!==undefined?x.ownedSeasons:(x.ns||0)),seen=x=>x.k==="s"?(own(x)>0&&(x.sw||0)>=own(x)):!!x.vu,prog=x=>x.k==="s"&&(x.sw||0)>0&&!seen(x);
-const SUPF=["DVD","Blu-ray","4K UHD","Fichier numérique"],SUPM=["Vinyle","CD","K7","MP3"],SUPB=["Roman","BD","Manga","Comics","Jeunesse","Essai","Autre"];let SUP=SUPF;const SC={"Vinyle":"vi","CD":"cd","K7":"k7","MP3":"fn","Blu-ray":"br","4K UHD":"uh","Fichier numérique":"fn","Roman":"ro","BD":"bd","Manga":"mg","Comics":"cx","Jeunesse":"je","Essai":"es","Autre":"au"},IMG="https://image.tmdb.org/t/p/";
+const SUPF=["DVD","Blu-ray","4K UHD","Fichier numérique"],SUPM=["Vinyle","CD","K7","MP3"],SUPB=["Roman","BD","Manga","Comics","Jeunesse","Essai","Autre"];let SUP=SUPF;const SC={"DVD":"dv","Vinyle":"vi","CD":"cd","K7":"k7","MP3":"fn","Blu-ray":"br","4K UHD":"uh","Fichier numérique":"fn","Roman":"ro","BD":"bd","Manga":"mg","Comics":"cx","Jeunesse":"je","Essai":"es","Autre":"au"},IMG="https://image.tmdb.org/t/p/";
 const pimg=(p,w)=>p.startsWith("gb:")?"https://books.google.com/books/content?id="+p.slice(3)+"&printsec=frontcover&img=1&zoom=1":p.startsWith("ol:")?"https://covers.openlibrary.org/b/id/"+p.slice(3)+(w==="w154"?"-M":"-L")+".jpg":p.startsWith("mb:")?"https://coverartarchive.org/release-group/"+p.slice(3)+"/front-250":IMG+w+p;
 const supOf=v=>/^\s*roman/i.test(v)?"Roman":/^\s*(bd|bande)/i.test(v)?"BD":/^\s*manga/i.test(v)?"Manga":/^\s*comics?/i.test(v)?"Comics":/^\s*jeunesse/i.test(v)?"Jeunesse":/^\s*essai/i.test(v)?"Essai":/^\s*autre/i.test(v)?"Autre":/vinyl|33 ?t|45 ?t|\blp\b/i.test(v)?"Vinyle":/k7|cass/i.test(v)?"K7":/mp3|flac|stream/i.test(v)?"MP3":/\bcd\b/i.test(v)?"CD":/4k|uhd/i.test(v)?"4K UHD":/blu/i.test(v)?"Blu-ray":/num|fichier|digital/i.test(v)?"Fichier numérique":"DVD";
 const fd=v=>v?String(v).split("-").reverse().join("/"):"";
@@ -45,7 +48,7 @@ const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOStr
 const tlHTML=ov=>{let n=0,h='<div class="tl">';String(ov).split(/\r?\n/).map(s=>s.trim()).filter(Boolean).forEach(s=>{if(s.startsWith("## ")){n=0;h+='<div class="tlh">'+esc(s.slice(3))+'</div>'}else{n++;h+='<div class="tk"><span>'+n+'.</span><div>'+esc(s.replace(/^\d+[.)]\s+/,""))+'</div></div>'}});return h+"</div>"};
 function rowHTML(x,open){
  const S=x.k==="s",M=x.k==="m",B=x.k==="b",sw=x.sw||0,ow=S?own(x):0;const vup=S?'<span class="sp">Saisons vues</span><button class="z sdn">−</button><b>'+sw+' / '+(x.ns||ow?ow:"?")+'</b><button class="z sin">+</button>'+(ow&&sw<ow?'<button class="z sall">Tout vu</button>':""):(x.vu?'<label class="vl">'+(M?"Écouté le":B?"Lu le":"Vu le")+' <input type="date" class="vd" value="'+esc(x.vu)+'"></label><button class="z vub">'+(M?"Pas écouté":B?"Pas lu":"Pas vu")+'</button>':'<button class="pri vub">'+(M?"✓ Marquer comme écouté":B?"✓ Marquer comme lu":"✓ Marquer comme vu")+'</button>');const acts=x.wl?'<button class="pri own">✓ Je l\'ai ! Ajouter à ma collection</button>':(x.l?'<span class="w">Prêté à '+esc(x.l.n)+' depuis le '+fd(x.l.d)+'</span><button class="z lnb">Rendu</button>':'<button class="z lnb">Prêter…</button>');const rows2=x.wl?"":'<div class="ac vr'+(S?"":" nw")+'">'+vup+'</div>'+(S?'<div class="ac vr"><span class="sp">Saisons possédées</span><b>'+ow+' / '+(x.ns||ow?x.ns||ow:"?")+'</b></div>':"");
- return `<div class="it ${SC[x.s]||""}${open?" open":""}" data-id="${esc(x.id)}" tabindex="0"><div class="rw">${x.pi?`<img class="pz${M?" sq":""}" loading="lazy" alt="" onerror="this.remove()" src="${esc(pimg(x.pi,grid?"w342":"w154"))}">`:""}<div class="rb"><div class="top"><div class="t">${esc(x.t)}</div><span class="nt">${x.wl?"":nl(x.n)}</span></div><div class="m">${((pre,suf)=>esc(pre)+(x.s?(pre?", ":"")+'<span class="fm">'+esc(x.s)+'</span>':"")+esc(suf))([x.r,x.y,S?(x.ns?(own(x)+" / "+x.ns+" saison"+(x.ns>1?"s":"")):""):M?(x.d?x.d+" min":""):B?(x.d?x.d+" p.":""):fmt(x.d),S?(x.ownedEpisodes!==undefined?x.ownedEpisodes+" / "+(x.episodesTotal||x.ne||0)+" épisodes possédés":(x.ne?x.ne+" épisodes":"")):""].filter(Boolean).join(", "),(S?(seen(x)?" · ✓ terminée":prog(x)?" · en cours "+sw+"/"+own(x):""):(x.vu?(M?" · ✓ écouté":B?" · ✓ lu":" · ✓ vu"):""))+(x.l?" · prêté à "+x.l.n:""))}</div></div></div><div class="ed"><button class="edit-item" type="button" title="Modifier la fiche" aria-label="Modifier la fiche">✎</button></div><div class="d">${x.ov?(M?tlHTML(x.ov):`<p class="ov">${esc(x.ov)}</p>`):""}<p><b>${M?"Style":"Genre"} :</b> ${esc(x.g||"à compléter")}</p>${M||B?"":`<p><b>Avec :</b> ${esc(x.a||"à compléter")}</p>`}<p><b>${M?"Label":B?"Éditeur":"Production"} :</b> ${esc(x.p||"à compléter")}</p><div class="ac"><select class="sup" aria-label="Support">${SUP.map(v=>`<option${v===x.s?" selected":""}>${v}</option>`).join("")}</select>${acts}</div>${rows2}<textarea class="cm" rows="2" placeholder="Commentaire, souvenir, état du disque…">${esc(x.c||"")}</textarea><p><a href="${esc(M?"https://musicbrainz.org/search?type=release_group&query="+encodeURIComponent(x.r+" "+x.t):B?"https://www.babelio.com/resrecherche.php?Recherche="+encodeURIComponent(x.t+" "+(x.r||"")):yurl(x.t))}" target="_blank" rel="noopener">${M?"Voir sur MusicBrainz":B?"Voir sur Babelio":"Voir sur Allociné"}</a> · <a href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(B?"couverture livre "+(x.r||"")+" "+x.t:(M?"pochette ":"jaquette ")+x.s+" "+(M?x.r+" ":"")+x.t+(x.y?" "+x.y:""))}" target="_blank" rel="noopener">${M?"Voir la pochette":B?"Voir la couverture":"Voir la jaquette"}</a></p>${x.v?'<p class="w">Ajouté depuis l\'appli : infos à vérifier <button class="z vfy">✓ C\'est vérifié</button></p>':""}<button class="z0 del">${x.wl?"Retirer de mes souhaits":"Retirer de la collection"}</button>${x.wl?"":`<div class="rt">${rt(x.n)}</div>`}</div></div>`}
+ return `<div class="it ${SC[x.s]||""}${open?" open":""}" data-id="${esc(x.id)}" tabindex="0"><div class="rw">${x.pi?`<img class="pz${M?" sq":""}" loading="lazy" alt="" onerror="this.remove()" src="${esc(pimg(x.pi,gridOn()?(gcols<=2?"w500":"w342"):"w154"))}">`:""}<div class="rb"><div class="top"><div class="t">${esc(x.t)}</div><span class="nt">${x.wl?"":nl(x.n)}</span></div><div class="m">${((pre,suf)=>esc(pre)+(x.s?(pre?", ":"")+'<span class="fm">'+esc(x.s)+'</span>':"")+esc(suf))([x.r,x.y,S?(x.ns?(own(x)+" / "+x.ns+" saison"+(x.ns>1?"s":"")):""):M?(x.d?x.d+" min":""):B?(x.d?x.d+" p.":""):fmt(x.d),S?(x.ownedEpisodes!==undefined?x.ownedEpisodes+" / "+(x.episodesTotal||x.ne||0)+" épisodes possédés":(x.ne?x.ne+" épisodes":"")):""].filter(Boolean).join(", "),(S?(seen(x)?" · ✓ terminée":prog(x)?" · en cours "+sw+"/"+own(x):""):(x.vu?(M?" · ✓ écouté":B?" · ✓ lu":" · ✓ vu"):""))+(x.l?" · prêté à "+x.l.n:""))}</div></div></div><div class="d">${x.ov?(M?tlHTML(x.ov):`<p class="ov">${esc(x.ov)}</p>`):""}<p><b>${M?"Style":"Genre"} :</b> ${esc(x.g||"à compléter")}</p>${M||B?"":`<p><b>Avec :</b> ${esc(x.a||"à compléter")}</p>`}<p><b>${M?"Label":B?"Éditeur":"Production"} :</b> ${esc(x.p||"à compléter")}</p><div class="ac"><select class="sup" aria-label="Support">${SUP.map(v=>`<option${v===x.s?" selected":""}>${v}</option>`).join("")}</select>${acts}</div>${rows2}${x.wl?"":`<div class="rt">${rt(x.n)}</div>`}<textarea class="cm" rows="2" placeholder="Commentaire, souvenir, état du disque…">${esc(x.c||"")}</textarea><p><a href="${esc(M?"https://musicbrainz.org/search?type=release_group&query="+encodeURIComponent(x.r+" "+x.t):B?"https://www.babelio.com/resrecherche.php?Recherche="+encodeURIComponent(x.t+" "+(x.r||"")):yurl(x.t))}" target="_blank" rel="noopener">${M?"Voir sur MusicBrainz":B?"Voir sur Babelio":"Voir sur Allociné"}</a> · <a href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(B?"couverture livre "+(x.r||"")+" "+x.t:(M?"pochette ":"jaquette ")+x.s+" "+(M?x.r+" ":"")+x.t+(x.y?" "+x.y:""))}" target="_blank" rel="noopener">${M?"Voir la pochette":B?"Voir la couverture":"Voir la jaquette"}</a></p>${x.v?'<p class="w">Ajouté depuis l\'appli : infos à vérifier <button class="z vfy">✓ C\'est vérifié</button></p>':""}<div class="fbar"><button class="z0 del">${x.wl?"Retirer de mes souhaits":"Retirer de la collection"}</button><button class="edit-item" type="button" title="Modifier la fiche" aria-label="Modifier la fiche"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6.5A2.5 2.5 0 0 0 4 5.5v13A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V11"/><path d="M18.4 2.6a1.9 1.9 0 0 1 2.7 2.7L12 14.4 8.5 15.5l1.1-3.5z"/></svg></button></div></div></div>`}
 function refresh(id,open){const f=D.find(x=>x.id===id),c=card(id);if(f&&c)c.outerHTML=rowHTML(f,open===undefined?c.classList.contains("open"):open)}
 function draw(){
   {const qv=$("q").value,hasF=document.activeElement===$("q");if(qv&&$("q").hidden)qOpen(true);else if(!qv&&!$("q").hidden&&!hasF)qOpen(false)}
@@ -88,7 +91,8 @@ $("l").onclick=e=>{const it=e.target.closest(".it");if(!it)return;const id=it.da
  if(e.target.closest(".vub")){if(f.vu)delete f.vu;else f.vu=today();put(f);refresh(id);return}
  if(e.target.closest(".lnb")){if(f.l)delete f.l;else{const n=(prompt("Prêté à qui ?")||"").trim();if(!n)return;f.l={n,d:today()}}put(f);refresh(id);return}
  if(e.target.closest(".own")){delete f.wl;put(f);lists();draw();return}
- if(e.target.closest(".rw")){const o=toggleCard(it);if(o&&!f.pi&&!f.eq)enrich(f).then(ok=>{if(ok)refresh(id)})}};
+ if(e.target.closest(".rw")){const o=toggleCard(it);if(o&&!f.pi&&!f.eq)enrich(f).then(ok=>{if(ok)refresh(id)});
+  if(o&&f.k==="m"&&!f.ov&&(f.pi||"").startsWith("mb:")&&!tq.has(id)){tq.add(id);mbTracks(f.pi.slice(3)).then(t=>{if(t){f.ov=t;put(f);refresh(id)}}).catch(()=>{})}}};
 $("l").onchange=e=>{const it=e.target.closest(".it");if(!it)return;const id=it.dataset.id,f=D.find(x=>x.id===id),t=e.target;if(!f)return;
  if(t.classList.contains("sup")){f.s=t.value;put(f);refresh(id)}
  else if(t.classList.contains("vd")){t.value?f.vu=t.value:delete f.vu;put(f);refresh(id)}
@@ -102,10 +106,11 @@ L.addEventListener("touchend",e=>{if(!it0)return;const t=e.changedTouches[0],dx=
 let synR=[],synI=0,synQ="";
 $("synA").onclick=()=>{const t=$("fT").value.trim();if(!t){$("synS").textContent="Mets d'abord un titre.";return}window.open(yurl(t),"_blank","noopener");$("synS").textContent="Allociné ne se laisse pas lire depuis l'appli : copie le synopsis là-bas, reviens ici et colle-le dans la case."};
 $("syn").onclick=async()=>{const t=$("fT").value.trim(),st=$("synS");if(!t){st.textContent="Mets d'abord un titre.";return}
- if(typ==="b"){const au=$("fR").value.trim(),bq=t+"|"+au;try{if(bq!==synQ){st.textContent="Recherche…";synR=(await gbSearch("intitle:"+t+(au?" inauthor:"+au:""))).filter(z=>z.synopsis);synI=0;synQ=bq}else synI=(synI+1)%Math.max(1,synR.length);
-  if(!synR.length){st.textContent="Pas de résumé trouvé : colle-le à la main.";return}
-  const r=synR[synI];$("fO").value=r.synopsis;cur.ov=r.synopsis;st.textContent=r.titre+(r.annee?" ("+r.annee+")":"")+" · "+(synI+1)+"/"+synR.length+(synR.length>1?" · pas le bon ? Rappuie pour le suivant.":"")}
-  catch(e){st.textContent="Recherche impossible pour l'instant."}return}
+ if(typ==="b"){const au=$("fR").value.trim(),is=isbnNorm(cur.isbn||""),bq=t+"|"+au+"|"+(is?is.i13:"");
+  try{if(bq!==synQ){st.textContent="Recherche du résumé…";synR=await bookSyn(t,au,is);synI=0;synQ=bq}else synI=(synI+1)%Math.max(1,synR.length);
+   if(!synR.length){st.textContent="Aucun résumé trouvé dans Google Livres ni Open Library : colle-le à la main (4ᵉ de couverture, Babelio…).";return}
+   const r=synR[synI];$("fO").value=r.synopsis;cur.ov=r.synopsis;st.textContent=r.titre+(r.annee?" ("+r.annee+")":"")+" · "+r.src+" · "+(synI+1)+"/"+synR.length+(synR.length>1?" · pas le bon ? Rappuie pour le suivant.":"")}
+  catch(e){st.textContent="Recherche impossible ("+netMsg(e)+") : réessaie dans un instant."}return}
  if(typ==="m"){st.textContent="Recherche des titres…";try{let rg=(cur.pi||"").startsWith("mb:")?cur.pi.slice(3):"";if(!rg){const ar=$("fR").value.trim(),c=s=>s.replace(/[+\-&|!(){}\[\]^"~*?:\\\/]/g," ").trim();const j=await mbget("https://musicbrainz.org/ws/2/release-group/?query="+encodeURIComponent("releasegroup:("+c(t)+")"+(ar?" AND artist:("+c(ar)+")":""))+"&fmt=json&limit=1",1);rg=((j["release-groups"]||[])[0]||{}).id||"";await sleep(1100)}
   if(!rg){st.textContent="Album introuvable sur MusicBrainz : colle les titres à la main, un par ligne.";return}
   const tl=await mbTracks(rg);if(!tl){st.textContent="Pas de liste de titres pour cet album : colle-la à la main, un par ligne.";return}
@@ -120,7 +125,7 @@ $("syn").onclick=async()=>{const t=$("fT").value.trim(),st=$("synS");if(!t){st.t
 $("upb").onclick=()=>window.scrollTo({top:0,behavior:"smooth"});
 /* ---------- onglets, ce soir, stats ---------- */
 function resetSoir(){["sdu","sgn","sdir","sact"].forEach(i=>{const e=$(i);if(e)e.value=""});$("sst").selectedIndex=0;$("pick").innerHTML='<div class="e">Règle tes envies, puis tire au sort.<br>Les titres prêtés sont exclus.</div>';lp=null}
-function setView(v){if(view==="s"&&v!=="s")resetSoir();view=v;document.body.dataset.view=v;document.querySelectorAll("#tb button[data-t]").forEach(b=>b.classList.toggle("on",b.dataset.t===v));
+function setView(v){if(view==="s"&&v!=="s")resetSoir();view=v;document.body.dataset.view=v;applyGrid();document.querySelectorAll("#tb button[data-t]").forEach(b=>b.classList.toggle("on",b.dataset.t===v));
  $("l").hidden=!(v==="c"||v==="w");$("sv").hidden=v!=="s";$("tv").hidden=v!=="t";
  if(v==="t")stats();draw();window.scrollTo(0,0)}
 function setType(t){typ=t;document.body.dataset.t=t;["du","dc","nm","fr","fa","fpr","q","g","su","st","sdu","sgn"].forEach(i=>{const e=$(i);if(e)e.value=""});$("sst").selectedIndex=0;$("s").value="t";asc=true;$("o").textContent=lab();$("pn").hidden=true;$("fb").setAttribute("aria-expanded","false");qOpen(false);window.scrollTo(0,0);sup.clear();nn=false;document.querySelectorAll(".chip[data-k]").forEach(b=>b.setAttribute("aria-pressed","false"));$("v").setAttribute("aria-pressed","false");const S=t==="s";document.querySelectorAll("#ty button[data-y]").forEach(b=>b.classList.toggle("on",b.dataset.y===t));
@@ -208,9 +213,10 @@ $("tu").onclick=()=>{if(!undo)return;const f=undo;undo=null;$("ts").hidden=true;
 /* ---------- ajout : titre → TMDB puis Wikidata ; photo → Gemini (titre seulement) ---------- */
 const msg=t=>{$("sm").textContent=t||""};
 let cur={},editingId=null;
-function editItem(f){editingId=f.id;cur={pi:f.pi||"",ov:f.ov||"",seasonEpisodes:f.seasonEpisodes||null};$("fO").value=f.ov||"";$("synS").textContent="";$("fT").value=f.t||"";$("fR").value=f.r||"";$("fY").value=f.y||"";$("fD").value=f.d||"";$("fG").value=f.g||"";$("fA").value=f.a||"";$("fP").value=f.p||"";$("fNs").value=f.ns||"";$("fNe").value=f.ne||"";if(SUP.includes(f.s))$("fS").value=f.s;$("manual").open=true;$("manual").hidden=false;$("ad").hidden=false;$("ad").querySelector("h2").textContent="Modifier la fiche";$("fok").textContent="Enregistrer les modifications";seasonEditor(f);msg("Modifie les champs puis enregistre.");}
-function fill(c){cur={pi:c.affiche||"",ov:c.synopsis||"",seasonEpisodes:c.seasonEpisodes||null};$("fO").value=c.synopsis||"";$("fT").value=c.titre||"";$("fR").value=c.realisateur||"";$("fY").value=c.annee||"";$("fD").value=c.duree||"";$("fG").value=c.genre||"";$("fA").value=c.acteurs||"";$("fP").value=c.production||"";$("fNs").value=c.saisons||"";$("fNe").value=c.episodes||"";if(SUP.includes(c.support))$("fS").value=c.support;if(typ==="s")seasonEditor({seasonEpisodes:c.seasonEpisodes});
- if(typ==="m"&&!c.synopsis&&(c.affiche||"").startsWith("mb:")){const pi=c.affiche;$("synS").textContent="Récupération des titres…";mbTracks(pi.slice(3)).then(t=>{if(cur.pi!==pi)return;if(t&&!$("fO").value.trim()){$("fO").value=t;cur.ov=t;$("synS").textContent="Titres récupérés sur MusicBrainz."}else $("synS").textContent=""}).catch(()=>{if(cur.pi===pi)$("synS").textContent=""})}}
+function editItem(f){editingId=f.id;cur={pi:f.pi||"",ov:f.ov||"",seasonEpisodes:f.seasonEpisodes||null,isbn:f.isbn||""};$("fO").value=f.ov||"";$("synS").textContent="";$("fT").value=f.t||"";$("fR").value=f.r||"";$("fY").value=f.y||"";$("fD").value=f.d||"";$("fG").value=f.g||"";$("fA").value=f.a||"";$("fP").value=f.p||"";$("fNs").value=f.ns||"";$("fNe").value=f.ne||"";if(SUP.includes(f.s))$("fS").value=f.s;$("manual").open=true;$("manual").hidden=false;$("ad").hidden=false;$("ad").querySelector("h2").textContent="Modifier la fiche";$("fok").textContent="Enregistrer les modifications";seasonEditor(f);msg("Modifie les champs puis enregistre.");}
+function fill(c){cur={pi:c.affiche||"",ov:c.synopsis||"",seasonEpisodes:c.seasonEpisodes||null,isbn:c.isbn||""};$("fO").value=c.synopsis||"";$("fT").value=c.titre||"";$("fR").value=c.realisateur||"";$("fY").value=c.annee||"";$("fD").value=c.duree||"";$("fG").value=c.genre||"";$("fA").value=c.acteurs||"";$("fP").value=c.production||"";$("fNs").value=c.saisons||"";$("fNe").value=c.episodes||"";if(SUP.includes(c.support))$("fS").value=c.support;if(typ==="s")seasonEditor({seasonEpisodes:c.seasonEpisodes});
+ if(typ==="m"&&!c.synopsis&&(c.affiche||"").startsWith("mb:")){const pi=c.affiche;$("synS").textContent="Récupération des titres…";mbTracks(pi.slice(3)).then(t=>{if(cur.pi!==pi)return;if(t&&!$("fO").value.trim()){$("fO").value=t;cur.ov=t;$("synS").textContent="Titres récupérés sur MusicBrainz."}else $("synS").textContent=""}).catch(()=>{if(cur.pi===pi)$("synS").textContent=""})}
+ if(typ==="b"&&!c.synopsis&&c.titre){const me=cur;$("synS").textContent="Recherche du résumé…";bookSyn(c.titre,c.realisateur||"",isbnNorm(c.isbn||"")).then(r=>{if(cur!==me)return;if(r.length&&!$("fO").value.trim()){$("fO").value=r[0].synopsis;cur.ov=r[0].synopsis;$("synS").textContent="Résumé récupéré ("+r[0].src+") : relis-le avant d'enregistrer."}else $("synS").textContent=r.length?"":"Pas de résumé trouvé : colle-le à la main."}).catch(()=>{if(cur===me)$("synS").textContent=""})}}
 function seasonEditor(f){const seasons=f.seasonEpisodes||cur.seasonEpisodes||[];if(!seasons.length){$("seasonPick").innerHTML="";return}
  $("seasonPick").innerHTML='<div class="w2"><b>Saisons possédées</b><div class="hint">Coche uniquement les saisons que tu as.</div></div>'+seasons.map(z=>`<label class="season-choice"><input type="checkbox" value="${z.season}" ${(f.id?!Array.isArray(f.seasonsOwned)||f.seasonsOwned.includes(z.season):Array.isArray(f.seasonsOwned)&&f.seasonsOwned.includes(z.season))?"checked":""}> Saison ${z.season} · ${z.episodes} épisode${z.episodes>1?"s":""}</label>`).join("")}
 function show(a,src){a=dedupC(a||[]);$("sc").innerHTML="";if(!a.length){msg("Rien trouvé : ouvre « Saisie et retouches manuelles » pour créer la fiche, ou relance une recherche par titre.");$("manual").hidden=false;$("manual").open=true;return}
@@ -292,12 +298,12 @@ async function tmdbTv(q,y){const res=(await tget("/search/tv",{query:q,language:
     try{const sd=await tget("/tv/"+m.id+"/season/"+s.season_number,{language:"fr-FR"});return{season:s.season_number,episodes:(sd.episodes||[]).length}}catch(e){return{season:s.season_number,episodes:s.episode_count||0}}}));
    return{titre:d.name||m.name,titreOriginal:d.original_name||"",realisateur:(d.created_by||[]).map(x=>x.name).join(", "),duree:(d.episode_run_time||[])[0]||(d.last_episode_to_air||{}).runtime||"",genre:(d.genres||[]).slice(0,3).map(x=>x.name).join(" / "),annee:(d.first_air_date||"").slice(0,4),acteurs:(cr.cast||[]).slice(0,5).map(x=>x.name).join(", "),production:pc.slice(0,3).map(x=>x.name).join(", ")||"—",affiche:d.poster_path||"",synopsis:d.overview||"",saisons:d.number_of_seasons||"",episodes:d.number_of_episodes||"",seasonEpisodes}}
   catch(e){return{titre:m.name,titreOriginal:m.original_name||"",realisateur:"",duree:"",genre:"",annee:(m.first_air_date||"").slice(0,4),acteurs:"",production:"—",affiche:m.poster_path||"",synopsis:m.overview||"",saisons:"",episodes:"",seasonEpisodes:null}}}))}
-function musicUI(M){SUP=M?SUPM:SUPF;sup.clear();const o=a=>a.map(v=>"<option>"+v+"</option>").join("");
+function musicUI(M){SUP=M?SUPM:SUPF;sup.clear();setOptA(!M);const o=a=>a.map(v=>"<option>"+v+"</option>").join("");
  $("su").innerHTML='<option value="">Tous les supports</option>'+o(SUP);$("fS").innerHTML=o(SUP);
  $("s").querySelector("option[value=r]").textContent=M?"Artiste":"Réalisateur";
  $("fr").placeholder=M?"Artiste":"Réalisateur";$("fpr").placeholder=M?"Label":"Maison de production";$("fP").placeholder=$("fpr").placeholder;
  $("fa").hidden=M;$("fA").hidden=M;$("fO").placeholder=M?"Liste des titres, un par ligne (## Disque 2 pour séparer les disques)":"Synopsis";$("syn").textContent=M?"↻ Récupérer les titres":"↻ Récupérer le synopsis";$("synA").style.display=M?"none":"";
- ["sdir","sact"].forEach(i=>{const e=$(i);if(!e)return;const w=e.closest(".clear-wrap")||e;w.style.display=M?"none":"";if(M)e.value=""});$("bcr").hidden=view==="w"||!M;$("fG").placeholder=M?"Style (ex. Rock / Rap / Électro)":"Genre (ex. Comédie / Action)";$("s").querySelector("option[value=g]").textContent=M?"Style":"Genre";$("q").placeholder=M?"Album, artiste ou label":"Titre, réalisateur, acteur ou production";
+ ["sdir","sact"].forEach(i=>{const e=$(i);if(!e)return;const w=e.closest(".clear-wrap")||e;w.style.display=M?"none":"";if(M)e.value=""});$("bcr").hidden=false;$("fG").placeholder=M?"Style (ex. Rock / Rap / Électro)":"Genre (ex. Comédie / Action)";$("s").querySelector("option[value=g]").textContent=M?"Style":"Genre";$("q").placeholder=M?"Album, artiste ou label":"Titre, réalisateur, acteur ou production";
  $("cam").textContent=M?"📷 Photographier la pochette":"📷 Photographier la jaquette";$("sq").placeholder=M?"Ou cherche par titre ou artiste":"Ou cherche par titre";
  if(M){$("dice").textContent="🎲 Tire-moi un album";$("sst").options[0].textContent="Pas encore écoutés";$("sst").options[1].textContent="Écoutés ou non";
   $("st").innerHTML='<option value="">Écoutés ou non</option><option value="vu">Écoutés</option><option value="nv">Pas encore écoutés</option><option value="pr">Prêtés</option>'}}
@@ -334,24 +340,67 @@ async function findBook(q,au){$("sc").innerHTML="";const c=q.replace(/[\s-]/g,""
  if(ge&&oe){msg("Recherche impossible ("+netMsg(ge)+") : remplis la fiche à la main.");return}
  const src=a.length&&o.length?"Google Livres + Open Library":a.length?"Google Livres":"Open Library";
  show(rankBooks(Q,dedupBooks(a.concat(o)),A).slice(0,6),src)}
-async function lookupISBN(c){c=String(c).replace(/[^0-9Xx]/g,"");$("sq").value=c;$("sc").innerHTML="";msg("ISBN "+c+" : recherche…");
- try{let a=[],src="Google Livres";try{a=await gbSearch("isbn:"+c)}catch(e){}
-  if(!a.length){try{a=await olSearch("isbn="+c);src="Open Library"}catch(e){}}
-  if(!a.length){msg("ISBN "+c+" introuvable : cherche par titre ou remplis la fiche à la main.");return}
-  show(dedupBooks(a).slice(0,3),src)}
- catch(e){msg(navigator.onLine?"Recherche impossible pour l'instant : réessaie dans un instant.":"Pas de connexion : remplis la fiche à la main.")}}
+/* ISBN : nettoyage, ISBN-10 <-> ISBN-13, contrôle de la clé */
+const isbn13c=d=>{let t=0;for(let i=0;i<12;i++)t+=(+d[i])*(i%2?3:1);return(10-t%10)%10};
+const isbn10c=d=>{let t=0;for(let i=0;i<9;i++)t+=(+d[i])*(10-i);const r=(11-t%11)%11;return r===10?"X":String(r)};
+function isbnNorm(v){const c=String(v||"").toUpperCase().replace(/[^0-9X]/g,"");
+ if(/^\d{9}[\dX]$/.test(c)){let i13="978"+c.slice(0,9);i13+=isbn13c(i13);return{ok:isbn10c(c)===c[9],i10:c,i13}}
+ if(/^\d{13}$/.test(c)){const ok=isbn13c(c)===+c[12];const i10=/^978/.test(c)?c.slice(3,12)+isbn10c(c.slice(3,12)):"";return{ok,i10,i13:c}}
+ return null}
+const gbVol=async id=>{try{return gbMap(await fj("https://www.googleapis.com/books/v1/volumes/"+encodeURIComponent(id)))}catch(e){return null}};
+/* source 1 : Google Livres (ISBN-13 puis ISBN-10 ; le résumé complet est pris dans la fiche détaillée si la liste n'en a pas) */
+async function isbnGB(n){let out=[],err=null;
+ for(const q of [n.i13,n.i10].filter(Boolean)){try{const r=await gbSearch("isbn:"+q,3);if(r.length){out=r;break}}catch(e){err=e}}
+ if(!out.length){if(err)throw err;return[]}
+ if(!out[0].synopsis&&out[0].affiche){const d=await gbVol(out[0].affiche.slice(3));if(d&&d.synopsis)out[0].synopsis=d.synopsis}
+ return out}
+/* source 2 : Open Library (fiche de l'édition + fiche de l'œuvre pour le résumé et l'auteur) */
+async function isbnOL(n){let ed=null,err=null;
+ for(const q of [n.i13,n.i10].filter(Boolean)){try{ed=await fj("https://openlibrary.org/isbn/"+q+".json");if(ed&&ed.title)break}catch(e){if(!(e&&e.status===404))err=e}}
+ if(!ed||!ed.title){if(err)throw err;return[]}
+ const tx=v=>v?(typeof v==="string"?v:(v.value||"")):"";let syn=tx(ed.description),au="";
+ try{const wk=(ed.works||[])[0];if(wk&&wk.key){const w=await fj("https://openlibrary.org"+wk.key+".json");if(!syn)syn=tx(w.description);
+  const ks=(w.authors||[]).map(z=>z.author&&z.author.key).filter(Boolean).slice(0,2);
+  au=(await Promise.all(ks.map(k=>fj("https://openlibrary.org"+k+".json").then(z=>z.name||"").catch(()=>"")))).filter(Boolean).join(", ")}}catch(e){}
+ const cov=(ed.covers||[]).find(z=>z>0);
+ return[{titre:ed.title+(ed.subtitle?" : "+ed.subtitle:""),realisateur:au,annee:((ed.publish_date||"").match(/\d{4}/)||[""])[0],duree:ed.number_of_pages||"",genre:"",production:(ed.publishers||[])[0]||"",synopsis:htmlTxt(syn),affiche:cov?"ol:"+cov:"",support:"",acteurs:""}]}
+/* un même ISBN = une même édition : on fusionne les sources en une seule fiche (premier champ renseigné gagne) */
+async function lookupISBN(raw){const c=String(raw).replace(/[^0-9Xx]/g,""),n=isbnNorm(c);$("sq").value=c;$("sc").innerHTML="";$("ocrl").innerHTML="";
+ if(!n){msg("« "+c+" » n'est pas un ISBN valide (10 ou 13 chiffres) : vérifie le code ou cherche par titre.");return false}
+ const my=++fseq;msg("ISBN "+n.i13+" : recherche dans Google Livres et Open Library…");
+ const rs=await Promise.allSettled([isbnGB(n),isbnOL(n)]);if(my!==fseq)return false;
+ const g=rs[0].status==="fulfilled"?rs[0].value:[],o=rs[1].status==="fulfilled"?rs[1].value:[];let ex=[];
+ if(!g.length&&!o.length){try{ex=await olSearch("isbn="+n.i13)}catch(e){}}
+ const pool=[g[0],o[0],...g.slice(1),...ex].filter(Boolean);
+ if(!pool.length){msg(rs.every(r=>r.status==="rejected")?"Recherche impossible ("+netMsg(rs[0].reason)+") : réessaie dans un instant, ou cherche par titre.":"ISBN "+n.i13+" introuvable dans Google Livres et Open Library : cherche par titre, ou remplis la fiche à la main.");return false}
+ const m={};pool.forEach(x=>{for(const f in x)if(!m[f]&&x[f])m[f]=x[f]});m.isbn=n.i13;
+ const src=[g.length?"Google Livres":"",o.length?"Open Library":"",ex.length?"Open Library":""].filter((v,i,a)=>v&&a.indexOf(v)===i).join(" + ");
+ show([m],src+" (ISBN "+n.i13+")");
+ if(!n.ok)msg($("sm").textContent+" Attention : la clé de contrôle de cet ISBN est incorrecte, vérifie le code.");
+ return true}
+/* résumé d'un livre : ISBN (si connu) d'abord, puis recherche par titre ; plusieurs sources, on garde celles qui ont un texte */
+async function bookSyn(t,au,is){const out=[],q=v=>String(v||"").replace(/"/g," ").trim(),jobs=[];
+ if(is){jobs.push(isbnGB(is).then(r=>r.map(x=>[x,"Google Livres (ISBN)"])),isbnOL(is).then(r=>r.map(x=>[x,"Open Library (ISBN)"])))}
+ jobs.push((async()=>{const r=await gbSearch('intitle:"'+q(t)+'"'+(au?' inauthor:"'+q(au)+'"':""),8),top=rankBooks(t,r,au).filter(x=>tmScore(t,[x.titre])>=50).slice(0,4),res=[];
+  for(const x of top){if(!x.synopsis&&x.affiche){const d=await gbVol(x.affiche.slice(3));if(d)x.synopsis=d.synopsis}res.push([x,"Google Livres"])}return res})());
+ jobs.push((async()=>{const j=await fj("https://openlibrary.org/search.json?limit=4&fields=key,title,first_publish_year&title="+encodeURIComponent(t)+(au?"&author="+encodeURIComponent(au):"")),res=[];
+  for(const d of(j.docs||[]).filter(d=>tmScore(t,[d.title])>=60).slice(0,3)){try{const w=await fj("https://openlibrary.org"+d.key+".json"),v=w.description;res.push([{titre:d.title,annee:d.first_publish_year||"",synopsis:htmlTxt(v&&v.value?v.value:v)},"Open Library"])}catch(e){}}return res})());
+ const rs=await Promise.allSettled(jobs);
+ rs.forEach(r=>{if(r.status==="fulfilled")r.value.forEach(([x,src])=>{if(x&&x.synopsis&&x.synopsis.length>10&&!out.some(o=>o.synopsis===x.synopsis))out.push({...x,src})})});
+ if(!out.length&&rs.every(r=>r.status==="rejected"))throw rs[0].reason;
+ return out}
 function bookUI(B){const o=a=>a.map(v=>"<option>"+v+"</option>").join(""),ov=a=>a.map(v=>'<option value="'+v+'">'+v+'</option>').join(""),sel=v=>$("s").querySelector("option[value="+v+"]");
  if(B){SUP=SUPB;sup.clear();$("su").innerHTML='<option value="">Tous les types</option>'+o(SUPB);$("fS").innerHTML=o(SUPB);$("su").setAttribute("aria-label","Type");
-  sel("r").textContent="Auteur";sel("l").textContent="Pages";sel("s").textContent="Type";sel("p").textContent="Éditeur";{const oa=sel("a");oa.disabled=true;oa.hidden=true}
+  sel("r").textContent="Auteur";sel("l").textContent="Pages";sel("s").textContent="Type";sel("p").textContent="Éditeur";setOptA(false)
   $("fr").placeholder="Auteur";$("fpr").placeholder="Éditeur";$("fP").placeholder="Éditeur";$("fa").hidden=true;$("fA").hidden=true;
   $("fO").placeholder="Résumé";$("syn").textContent="↻ Récupérer le résumé";$("synA").style.display="none";
   $("fG").placeholder="Genre (ex. Polar / SF / Fantasy)";$("q").placeholder="Titre, auteur ou éditeur";
-  $("cam").textContent="📷 Photographier la couverture";$("sq").placeholder="Titre, auteur ou ISBN";$("bcr").hidden=view==="w";
+  $("cam").textContent="📷 Photographier la couverture";$("sq").placeholder="Titre, auteur ou ISBN";$("bcr").hidden=false;
   $("dice").textContent="🎲 Tire-moi un livre";$("sst").options[0].textContent="Pas encore lus";$("sst").options[1].textContent="Lus ou non";
   $("st").innerHTML='<option value="">Lus ou non</option><option value="vu">Lus</option><option value="nv">Pas encore lus</option><option value="pr">Prêtés</option>';
   $("du").innerHTML='<option value="">Toutes les longueurs</option>'+ov([...TRB,"Non renseignée"]);
   $("sdu").innerHTML='<option value="">Longueur : peu importe</option><option value="150">Moins de 150 pages</option><option value="300">Moins de 300 pages</option><option value="500">Moins de 500 pages</option>'}
- else{sel("l").textContent="Durée";sel("s").textContent="Support";sel("p").textContent="Production / label";{const oa=sel("a");oa.disabled=false;oa.hidden=false}
+ else{sel("l").textContent="Durée";sel("s").textContent="Support";sel("p").textContent="Production / label";setOptA(typ!=="m")
   $("su").setAttribute("aria-label","Support");$("du").innerHTML='<option value="">Toutes les durées</option>'+ov([...TR,"Non renseignée"]);$("sdu").innerHTML=SDU0}}
 /* Scanner de code-barres : BarcodeDetector si dispo, sinon ZXing chargé à la demande */
 let bstream=null,bstop=null;
@@ -374,18 +423,27 @@ async function scanCode(){let done=false,last="",hits=0;$("bm").textContent="Vis
  catch(e){bsClose();msg("Caméra indisponible : autorise-la dans les réglages du navigateur, ou tape le code-barres dans la recherche.")}}
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function mbget(u,t=2){return fj(u,undefined,12000,t)}
-async function lookupBC(c){if(typ==="b"){await lookupISBN(c);return}c=String(c).replace(/\D/g,"");$("sq").value=c;$("sc").innerHTML="";msg("Code "+c+" : recherche…");
+/* films / séries : code-barres -> titre du produit (UPCitemdb, gratuit sans compte, quota journalier) -> recherche normale */
+const cleanVT=v=>String(v).replace(/[\[(][^\])]*[\])]/g," ").replace(/\b(blu[ -]?ray|dvd|4k|uhd|ultra hd|hd|steelbook|coffret|edition|édition|collector|widescreen|import|combo|disc|disque|digital copy)\b/gi," ").replace(/\b(19|20)\d{2}\b\s*$/,"").replace(/[-–:+]+\s*$/,"").replace(/\s+/g," ").trim();
+async function lookupBCvideo(c){c=String(c).replace(/\D/g,"");$("sq").value=c;$("sc").innerHTML="";$("ocrl").innerHTML="";msg("Code "+c+" : recherche…");
+ const vars=[...new Set([c,c.length===12?"0"+c:"",c.length===13&&c[0]==="0"?c.slice(1):""].filter(Boolean))];let items=[],err=null;
+ for(const v of vars){try{items=(await fj("https://api.upcitemdb.com/prod/trial/lookup?upc="+v,undefined,12000,0)).items||[];if(items.length)break}catch(e){err=e;if(e&&e.status===429)break}}
+ if(!items.length){msg(err?"Recherche par code-barres indisponible ("+(err.status===429?"quota gratuit du jour atteint":netMsg(err))+") : tape le titre dans la recherche.":"Code "+c+" absent des bases gratuites (fréquent sur les DVD / Blu-ray français) : cherche par titre.");return false}
+ const raw=String(items[0].title||""),su=/4k|uhd|ultra hd/i.test(raw)?"4K UHD":/blu[ -]?ray/i.test(raw)?"Blu-ray":/dvd/i.test(raw)?"DVD":"",ti=cleanVT(raw),yr=(raw.match(/\b(19|20)\d{2}\b/)||[""])[0];
+ if(!ti){msg("Code trouvé mais titre inexploitable : cherche par titre.");return false}
+ $("sq").value=ti;await find(ti,yr);if(su&&SUP.includes(su))$("fS").value=su;$("sm").textContent+=" (code "+c+" → « "+raw.slice(0,60)+" »)";return true}
+async function lookupBC(c){if(typ==="b")return await lookupISBN(c);if(typ==="f"||typ==="s")return await lookupBCvideo(c);c=String(c).replace(/\D/g,"");$("sq").value=c;$("sc").innerHTML="";msg("Code "+c+" : recherche…");
  /* UPC (12) et EAN (13 avec 0 devant) sont le même code : on essaie les deux écritures */
  const vars=[...new Set([c,c.length===12?"0"+c:"",c.length===13&&c[0]==="0"?c.slice(1):""].filter(Boolean))];
  try{let rs=[];
   for(const v of vars){const u=new URL("https://musicbrainz.org/ws/2/release/");u.searchParams.set("query",'barcode:"'+v+'"');u.searchParams.set("fmt","json");u.searchParams.set("limit","8");
    rs=(await mbget(u)).releases||[];if(rs.length)break;await sleep(1100)}
-  if(!rs.length){msg("Code "+c+" absent de MusicBrainz (fréquent sur les éditions rares) : cherche par titre.");return}
+  if(!rs.length){msg("Code "+c+" absent de MusicBrainz (fréquent sur les éditions rares) : cherche par titre.");return false}
   const fm=x=>{const f=((x.media||[])[0]||{}).format||"";return/vinyl|12"|7"|10"/i.test(f)?"Vinyle":/cass/i.test(f)?"K7":/digital/i.test(f)?"MP3":"CD"},seenRG=new Set(),a=[];
   for(const x of rs){const g=x["release-group"]&&x["release-group"].id;if(g&&seenRG.has(g))continue;if(g)seenRG.add(g);
    a.push({titre:x.title,realisateur:(x["artist-credit"]||[]).map(z=>z.name).join(", "),annee:(x.date||"").slice(0,4),affiche:g?"mb:"+g:"",support:fm(x),genre:"",production:((x["label-info"]||[])[0]||{}).label?((x["label-info"]||[])[0].label.name||""):"",duree:"",acteurs:"",synopsis:"",g})}
   for(const c2 of a.slice(0,3)){if(!c2.g)continue;try{await sleep(1100);const t=await mbget("https://musicbrainz.org/ws/2/release-group/"+c2.g+"?inc=tags&fmt=json",1);c2.genre=(t.tags||[]).sort((p,q)=>q.count-p.count).slice(0,3).map(z=>z.name).join(" / ")}catch(e){}}
-  show(a.slice(0,3),"MusicBrainz (code-barres)")}
+  show(a.slice(0,3),"MusicBrainz (code-barres)");return true}
  catch(e){msg(navigator.onLine?"MusicBrainz ne répond pas : réessaie dans un instant ou cherche par titre.":"Pas de connexion : remplis la fiche à la main.")}}
 $("bc").onclick=scanCode;$("bx").onclick=bsClose;
 /* MusicBrainz (sans clé) + pochettes Cover Art Archive */
@@ -410,6 +468,7 @@ async function find(q,y,au){const my=++fseq,ms2=t=>{if(my===fseq)msg(t)},sh2=(a,
  if(typ==="f"||typ==="s"){const r=splitYear(q,y);q=r[0];y=r[1]}
  if(typ==="b"||typ==="m"){au=String(au||"").trim();if(!au){const m=q.split(/\s+[·|—]\s+/);if(m.length===2&&m[0].trim()&&m[1].trim()){q=m[0].trim();au=m[1].trim()}}}
  if(typ==="b"){await findBook(q,au);return}
+ if((typ==="f"||typ==="s"||typ==="m")&&/^[\d\s-]{8,16}$/.test(q)&&ean(q.replace(/\D/g,""))){await lookupBC(q);return}
  if(view==="w"&&typ==="m"){ms2("Recherche de l’artiste…");const qa=au||q;
   try{const ar=await mbget("https://musicbrainz.org/ws/2/artist/?query="+encodeURIComponent(qa)+"&fmt=json&limit=5"),list=ar.artists||[],artist=list.find(z=>sk(z.name)===sk(qa))||list[0];
    if(artist){const rg=await mbget("https://musicbrainz.org/ws/2/release-group/?artist="+artist.id+"&type="+encodeURIComponent("album|ep")+"&fmt=json&limit=50"),
@@ -428,29 +487,59 @@ async function find(q,y,au){const my=++fseq,ms2=t=>{if(my===fseq)msg(t)},sh2=(a,
  sh2(a,src);
  if(te&&my===fseq)$("sm").textContent+=" (TMDB indisponible : "+netMsg(te)+")"}
 /* Scan photo : Gemini ne renvoie que le titre (1 petit appel), la fiche vient de TMDB/Wikidata */
-async function scan(blob){const k=localStorage.getItem(KEY);if(!k){openSettings("Pour scanner une jaquette, colle d'abord ta clé Gemini (gratuite). Sinon, cherche par titre.");return}
+async function scan(blob){const k=localStorage.getItem(KEY);if(!k){await ocrScan(blob);return}
  msg("Lecture de la jaquette…");$("sc").innerHTML="";
  try{const mod=localStorage.getItem(MOD)||DEF_MOD,txt=typ==="b"?"Voici la photo d'une couverture de livre ou de BD. Lis le titre (sans le nom de l'auteur ni la collection) et le nom de l'auteur (prénom et nom). Réponds uniquement en JSON : {\"titre\":\"titre du livre\",\"artiste\":\"auteur\",\"annee\":0,\"support\":\"Roman, BD, Manga, Comics, Jeunesse ou Essai si évident, sinon vide\"}":typ==="m"?"Voici la photo d'une pochette d'album (vinyle, CD ou K7). Lis le titre de l'album (sans le nom de l'artiste) et le nom de l'artiste. Réponds uniquement en JSON : {\"titre\":\"titre de l'album\",\"artiste\":\"artiste\",\"annee\":année si visible sinon 0,\"support\":\"Vinyle, CD ou K7 si visible, sinon vide\"}":"Voici la photo d'une jaquette de DVD ou Blu-ray. Lis le titre du film ou de la série. Réponds uniquement en JSON : {\"titre\":\"titre lu sur la jaquette\",\"annee\":année si visible sinon 0,\"support\":\"DVD ou Blu-ray si visible, sinon vide\"}";
-  const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(mod)+":generateContent?key="+encodeURIComponent(k),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:[{inline_data:{mime_type:"image/jpeg",data:await b64(blob)}},{text:txt}]}],generationConfig:{responseMimeType:"application/json",temperature:0,maxOutputTokens:1024}}),signal:AbortSignal.timeout?AbortSignal.timeout(45000):undefined});
+  const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(mod)+":generateContent?key="+encodeURIComponent(k),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:[{inline_data:{mime_type:"image/jpeg",data:await b64(blob)}},{text:txt+CODEQ}]}],generationConfig:{responseMimeType:"application/json",temperature:0,maxOutputTokens:1024}}),signal:AbortSignal.timeout?AbortSignal.timeout(45000):undefined});
   if(!r.ok){let d="";try{const e=await r.json();d=(e.error&&e.error.message)||""}catch(_){}
-   msg(r.status===429?"Quota Google épuisé pour l'instant : tape le titre dans la recherche (ça ne consomme rien).":"Erreur Google ("+r.status+") : "+d.slice(0,120)+" — tu peux chercher par titre.");return}
+   msg((r.status===429?"Quota Google épuisé":"Erreur Google ("+r.status+")")+" : lecture locale de la photo à la place…");await ocrScan(blob);return}
   const j=await r.json(),c=(j.candidates||[])[0];
   let t=c?((c.content||{}).parts||[]).filter(p=>!p.thought).map(p=>p.text||"").join("").replace(/```json|```/g,"").trim():"",o;
   try{o=JSON.parse(t)}catch(_){const i=t.indexOf("{"),e=t.lastIndexOf("}");try{o=JSON.parse(t.slice(i,e+1))}catch(__){o=null}}
   if(Array.isArray(o))o=o[0];
-  if(!o||!o.titre){msg("Titre illisible sur la photo : tape-le dans la recherche.");return}
+  if(o&&o.code){const cc=String(o.code).replace(/\D/g,"");if(ean(cc)&&await lookupBC(cc))return}
+  if(!o||!o.titre){await ocrScan(blob);return}
   const au=(typ==="m"||typ==="b")?String(o.artiste||"").trim():"",ti=String(o.titre).trim();$("sq").value=ti+(au?" · "+au:"");await find(ti,typ==="m"||typ==="b"?"":(parseInt(o.annee,10)||""),au);
   if(SUP.includes(o.support))$("fS").value=o.support}
- catch(e){msg(navigator.onLine?(e&&(e.name==="TimeoutError"||e.name==="AbortError")?"La lecture a pris trop de temps : cherche par titre.":"Échec : "+((e&&e.message)||e)):"Pas de connexion : remplis la fiche à la main.")}}
+ catch(e){if(!navigator.onLine){msg("Pas de connexion : remplis la fiche à la main.");return}
+  if(e&&(e.name==="TimeoutError"||e.name==="AbortError"||e.name==="TypeError")){msg("Google n'a pas répondu : lecture locale de la photo…");await ocrScan(blob)}else msg("Échec : "+((e&&e.message)||e))}}
+const CODEQ=' Si un code-barres (EAN ou ISBN, 8 à 13 chiffres) est visible avec ses chiffres, ajoute aussi le champ "code" (chiffres seulement), sinon "".';
+async function bitmapOf(file,max){const u=URL.createObjectURL(file);try{const im=new Image();await new Promise((a,b)=>{im.onload=a;im.onerror=b;im.src=u});const k=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext("2d").drawImage(im,0,0,c.width,c.height);return c}finally{URL.revokeObjectURL(u)}}
+/* code-barres lisible sur la photo (dos de la boîte) = édition exacte ; BarcodeDetector si dispo, sinon ZXing */
+async function readBarcodeImg(file){try{const base=await bitmapOf(file,2000);
+ for(const rot of [0,90]){let cv=base;if(rot){cv=document.createElement("canvas");cv.width=base.height;cv.height=base.width;const x=cv.getContext("2d");x.translate(cv.width/2,cv.height/2);x.rotate(Math.PI/2);x.drawImage(base,-base.width/2,-base.height/2)}
+  if("BarcodeDetector"in window){try{const d=new BarcodeDetector({formats:["ean_13","ean_8","upc_a","upc_e"]}),h=(await d.detect(cv)).map(z=>z.rawValue).find(ean);if(h)return h}catch(e){}}
+  try{await loadZX();const Z=window.ZXing,h=new Map(),rd=new Z.MultiFormatReader();h.set(Z.DecodeHintType.POSSIBLE_FORMATS,[Z.BarcodeFormat.EAN_13,Z.BarcodeFormat.EAN_8,Z.BarcodeFormat.UPC_A,Z.BarcodeFormat.UPC_E]);h.set(Z.DecodeHintType.TRY_HARDER,true);rd.setHints(h);
+   const t=rd.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(cv)))).getText();if(ean(t))return t}catch(e){}}}catch(e){}return""}
+/* lecture locale du texte de la photo (Tesseract, gratuit, sans compte, tourne sur l'appareil) */
+const loadTess=()=>window.Tesseract?Promise.resolve():new Promise((a,b)=>{const e=document.createElement("script");e.src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";e.onload=a;e.onerror=b;document.head.append(e)});
+function ocrLines(d){const bad=/^(blu[ -]?ray|dvd|4k|uhd|hd|ultra hd|disc|disque|collector|edition|édition|version|steelbook|import|vf|vostfr|stereo|dolby|dts|cd|lp|vinyl|vinyle|nouveau|new)$/i,
+ cl=v=>String(v||"").replace(/[^\p{L}\p{N}'’:!&.,\- ]/gu," ").replace(/\s+/g," ").trim(),
+ ok=v=>{const n=(v.match(/\p{L}/gu)||[]).length;return v.length>=3&&n>=3&&n/v.length>=.6&&!bad.test(v)};
+ let ls=(d.lines||[]).map(l=>({s:cl(l.text),h:l.bbox?l.bbox.y1-l.bbox.y0:0,y:l.bbox?l.bbox.y0:0,c:l.confidence||0})).filter(l=>ok(l.s)&&l.c>=35);
+ if(!ls.length)ls=String(d.text||"").split(/\r?\n/).map(v=>({s:cl(v),h:0,y:0,c:50})).filter(l=>ok(l.s));
+ ls.sort((a,b)=>(b.h*b.c||b.s.length)-(a.h*a.c||a.s.length));
+ const out=[],a=ls[0];if(a&&a.h){const b=ls.slice(1).find(z=>Math.abs(z.h-a.h)<=a.h*.3&&Math.abs(z.y-a.y)<=a.h*2.2);if(b)out.push(a.y<=b.y?a.s+" "+b.s:b.s+" "+a.s)}
+ ls.forEach(l=>out.push(l.s));return[...new Set(out)].slice(0,5)}
+async function ocrScan(blob){msg("Lecture locale de la photo (gratuite, sans compte)… la 1ʳᵉ fois, quelques Mo à télécharger.");$("sc").innerHTML="";$("ocrl").innerHTML="";
+ try{await loadTess();
+  const r=await window.Tesseract.recognize(blob,"fra+eng",{logger:m=>{if(m&&m.status==="recognizing text")msg("Lecture du texte… "+Math.round((m.progress||0)*100)+" %")}}),d=(r&&r.data)||{},L=ocrLines(d);
+  if(!L.length){msg("Aucun texte lisible sur la photo : rapproche-toi, évite les reflets, ou tape le titre.");return}
+  $("sq").value=L[0];await find(L[0],"");
+  if(typ==="f"||typ==="s"){const T=d.text||"",su=/4k|ultra ?hd/i.test(T)?"4K UHD":/blu[ -]?ray/i.test(T)?"Blu-ray":/dvd/i.test(T)?"DVD":"";if(su&&SUP.includes(su))$("fS").value=su}
+  if(L.length>1){const o=$("ocrl");o.innerHTML='<div class="hint">Lu sur la photo. Ce n\'est pas le bon titre ? Essaie une autre ligne :</div>';L.slice(1).forEach(v=>{const b=document.createElement("button");b.className="cd";b.textContent=v;b.onclick=()=>{$("sq").value=v;$("sc").innerHTML="";find(v,"")};o.append(b)})}}
+ catch(e){msg("Lecture locale impossible ("+(navigator.onLine?"module indisponible":"pas de connexion")+") : tape le titre dans la recherche.")}}
 const b64=b=>new Promise((a,r)=>{const f=new FileReader();f.onload=()=>a(String(f.result).split(",")[1]);f.onerror=r;f.readAsDataURL(b)});
 async function shrink(file){const u=URL.createObjectURL(file);const im=new Image();await new Promise((a,b)=>{im.onload=a;im.onerror=b;im.src=u});
  const k=Math.min(1,1280/Math.max(im.width,im.height));const c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
  c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);return new Promise(r=>c.toBlob(r,"image/jpeg",.82))}
-$("add").onclick=()=>{if(view==="s"||view==="t")setView("c");editingId=null;cur={};$("fO").value="";$("synS").textContent="";$("ad").querySelector("h2").textContent=view==="w"?"Ajouter un souhait":"Ajouter un film";$("fok").textContent=view==="w"?"Ajouter à mes souhaits":"Ajouter à ma collection";$("manual").open=false;$("manual").hidden=false;$("cam").hidden=view==="w";$("bcr").hidden=view==="w"||(typ!=="m"&&typ!=="b");$("sq").placeholder=view==="w"?(typ==="b"?"Titre ou auteur":"Titre, réalisateur, artiste ou acteur"):typ==="b"?"Titre, auteur ou ISBN":"Ou cherche par titre";$("ad").querySelector("h2").textContent=view==="w"?"Ajouter un souhait":typ==="m"?"Ajouter un album":typ==="b"?"Ajouter un livre":typ==="s"?"Ajouter une série":"Ajouter un film";$("fR").placeholder=typ==="s"?"Créateur":typ==="m"?"Artiste":typ==="b"?"Auteur":"Réalisateur";$("fD").placeholder=typ==="s"?"Durée d'un épisode (min)":typ==="b"?"Nombre de pages":"Durée (min)";$("fok").textContent=view==="w"?"Ajouter à mes souhaits":"Ajouter à ma collection";$("ad").hidden=false;msg("");$("sc").innerHTML="";["fT","fR","fY","fD","fG","fA","fP","fNs","fNe","sq"].forEach(i=>$(i).value="");$("fS").selectedIndex=0};
+$("add").onclick=()=>{if(view==="s"||view==="t")setView("c");editingId=null;cur={};$("fO").value="";$("synS").textContent="";$("ad").querySelector("h2").textContent=view==="w"?"Ajouter un souhait":"Ajouter un film";$("fok").textContent=view==="w"?"Ajouter à mes souhaits":"Ajouter à ma collection";$("manual").open=false;$("manual").hidden=false;$("cam").hidden=view==="w";$("bcr").hidden=false;$("sq").placeholder=view==="w"?(typ==="b"?"Titre ou auteur":"Titre, réalisateur, artiste ou acteur"):typ==="b"?"Titre, auteur ou ISBN":"Ou cherche par titre";$("ad").querySelector("h2").textContent=view==="w"?"Ajouter un souhait":typ==="m"?"Ajouter un album":typ==="b"?"Ajouter un livre":typ==="s"?"Ajouter une série":"Ajouter un film";$("fR").placeholder=typ==="s"?"Créateur":typ==="m"?"Artiste":typ==="b"?"Auteur":"Réalisateur";$("fD").placeholder=typ==="s"?"Durée d'un épisode (min)":typ==="b"?"Nombre de pages":"Durée (min)";$("fok").textContent=view==="w"?"Ajouter à mes souhaits":"Ajouter à ma collection";$("ad").hidden=false;msg("");$("sc").innerHTML="";$("ocrl").innerHTML="";["fT","fR","fY","fD","fG","fA","fP","fNs","fNe","sq"].forEach(i=>$(i).value="");$("fS").selectedIndex=0};
 $("ax").onclick=()=>{$("ad").hidden=true;editingId=null;$("fok").textContent="Ajouter à ma collection";$("ad").querySelector("h2").textContent="Ajouter un film"};
-$("cam").onclick=()=>{if(!localStorage.getItem(KEY)){openSettings("Pour scanner une jaquette, colle d'abord ta clé Gemini (gratuite). Sinon, cherche par titre.");return}$("ph").click()};
+$("cam").onclick=()=>$("ph").click();
 $("ph").onchange=async()=>{const f=$("ph").files[0];$("ph").value="";if(!f)return;
- try{const b=await shrink(f);await scan(b)}catch(e){msg("Photo illisible : réessaie ou cherche par titre.")}};
+ try{$("sc").innerHTML="";$("ocrl").innerHTML="";msg("Recherche d'un code-barres sur la photo…");const code=await readBarcodeImg(f);
+  if(code){msg("Code-barres lu : "+code+" — recherche de l'édition exacte…");if(await lookupBC(code))return}
+  const b=await shrink(f);await scan(b)}catch(e){msg("Photo illisible : réessaie ou cherche par titre.")}};
 $("sb").onclick=()=>{const q=$("sq").value.trim();if(q)find(q)};
 $("sq").onkeydown=e=>{if(e.key==="Enter")$("sb").click()};
 document.querySelectorAll(".clear-wrap input").forEach(i=>{const sync=()=>i.parentElement.classList.toggle("has-value",!!i.value);i.addEventListener("input",sync);sync()});
@@ -464,13 +553,24 @@ $("fok").onclick=()=>{if(view==="w"&&!$("manual").open){$("manual").open=true;re
  const dup=editingId?null:D.find(x=>(x.k||"f")===typ&&nk(x.t)===nk(t)&&((typ!=="m"&&typ!=="b")||key(x.r)===key($("fR").value))&&(!x.y||!y||Math.abs(x.y-y)<=1));
  if(dup&&!confirm("« "+dup.t+(dup.y?" ("+dup.y+")":"")+" » est déjà "+(dup.wl?"dans tes souhaits":"dans ta collection")+". L'ajouter quand même ?"))return;
  const old=editingId?D.find(x=>x.id===editingId):null;
- const f={...(old||{}),id,t,r:$("fR").value.trim(),y,d:n($("fD").value),g:$("fG").value.trim(),a:$("fA").value.trim(),s:$("fS").value,p:$("fP").value.trim(),v:old?undefined:1};if(typ==="s"){f.k="s";const a=n($("fNs").value),b=n($("fNe").value);if(a)f.ns=a;if(b)f.ne=b;if(cur.seasonEpisodes){f.seasonEpisodes=cur.seasonEpisodes;f.episodesTotal=cur.seasonEpisodes.reduce((sum,z)=>sum+z.episodes,0);const selected=[...$("seasonPick").querySelectorAll('input[type="checkbox"]:checked')].map(z=>+z.value);f.seasonsOwned=selected;f.ns=cur.seasonEpisodes.length;f.ne=cur.seasonEpisodes.reduce((sum,z)=>sum+(selected.includes(z.season)?z.episodes:0),0);f.ownedSeasons=selected.length;f.ownedEpisodes=f.ne;}}if(typ==="m")f.k="m";if(typ==="b")f.k="b";if(view==="w")f.wl=1;if(cur.pi)f.pi=cur.pi;{const o=$("fO").value.trim();if(o)f.ov=o;else{delete f.ov;if(old)delete old.ov}}
+ const f={...(old||{}),id,t,r:$("fR").value.trim(),y,d:n($("fD").value),g:$("fG").value.trim(),a:$("fA").value.trim(),s:$("fS").value,p:$("fP").value.trim(),v:old?undefined:1};if(typ==="s"){f.k="s";const a=n($("fNs").value),b=n($("fNe").value);if(a)f.ns=a;if(b)f.ne=b;if(cur.seasonEpisodes){f.seasonEpisodes=cur.seasonEpisodes;f.episodesTotal=cur.seasonEpisodes.reduce((sum,z)=>sum+z.episodes,0);const selected=[...$("seasonPick").querySelectorAll('input[type="checkbox"]:checked')].map(z=>+z.value);f.seasonsOwned=selected;f.ns=cur.seasonEpisodes.length;f.ne=cur.seasonEpisodes.reduce((sum,z)=>sum+(selected.includes(z.season)?z.episodes:0),0);f.ownedSeasons=selected.length;f.ownedEpisodes=f.ne;}}if(typ==="m")f.k="m";if(typ==="b")f.k="b";if(view==="w")f.wl=1;if(cur.pi)f.pi=cur.pi;if(cur.isbn)f.isbn=cur.isbn;{const o=$("fO").value.trim();if(o)f.ov=o;else{delete f.ov;if(old)delete old.ov}}
  if(old)Object.assign(old,f);else D.push(f);put(f);editingId=null;lists();$("ad").hidden=true;$("manual").open=false;$("fok").textContent="Ajouter à ma collection";$("ad").querySelector("h2").textContent="Ajouter un film";$("q").value=t;draw();const c=card(id);if(c)c.classList.add("open")};
 /* ---------- réglages, export / import CSV ---------- */
-function openSettings(m){$("sg").hidden=false;snapUI();$("kk").value=localStorage.getItem(KEY)||"";$("km").value=localStorage.getItem(MOD)||"";$("km").placeholder="Modèle (défaut : "+DEF_MOD+")";$("sgs").textContent=m||"";$("km2").textContent=localStorage.getItem(KEY)?"Clé enregistrée sur cet appareil.":"";$("tk").value=localStorage.getItem(TK)||"";$("tk2").textContent=localStorage.getItem(TK)?"Clé TMDB enregistrée sur cet appareil.":"Pas de clé TMDB : la recherche passe par Wikidata.";if(m)$("kk").focus()}
-const applyGrid=()=>{if(grid)document.body.dataset.g="1";else delete document.body.dataset.g;const b=$("gv");if(b)b.setAttribute("aria-pressed",grid?"true":"false")};
+function openSettings(m){$("sg").hidden=false;snapUI();$("kk").value=localStorage.getItem(KEY)||"";$("km").value=localStorage.getItem(MOD)||"";$("km").placeholder="Modèle (défaut : "+DEF_MOD+")";$("sgs").textContent=m||"";$("km2").textContent=localStorage.getItem(KEY)?"Clé enregistrée sur cet appareil.":"";$("tk").value=localStorage.getItem(TK)||"";$("tk2").textContent=localStorage.getItem(TK)?"Clé TMDB enregistrée sur cet appareil.":"Pas de clé TMDB : la recherche passe par Wikidata.";if(m){$("acG").open=true;$("kk").focus()}}
+function applyGrid(){if(gridOn())document.body.dataset.g="1";else delete document.body.dataset.g;document.body.dataset.gc=String(gcols);document.documentElement.style.setProperty("--gc",gcols);const b=$("gv");if(b)b.setAttribute("aria-pressed",grid?"true":"false")}
 {const b=$("gv");if(b)b.onclick=()=>{grid=!grid;try{localStorage.setItem("mt_grid",grid?"1":"0")}catch(e){}applyGrid();draw();window.scrollTo(0,0)}}
 applyGrid();
+/* zoom / dézoom de la grille : pincer (ou Ctrl + molette) = de 1 à 5 jaquettes par ligne */
+(()=>{const L=$("l");let d0=0,lt;
+ const flash=n=>{let e=$("gzl");if(!e){e=document.createElement("div");e.id="gzl";document.body.append(e)}e.textContent=n+(n>1?" jaquettes par ligne":" jaquette par ligne");e.classList.add("on");clearTimeout(lt);lt=setTimeout(()=>e.classList.remove("on"),900)};
+ const setCols=n=>{n=Math.max(1,Math.min(5,n));if(n===gcols)return;const big=gcols<=2;gcols=n;try{localStorage.setItem("mt_gcols",String(n))}catch(e){}applyGrid();if(big!==(n<=2))draw();flash(n)};
+ const dist=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
+ L.addEventListener("touchstart",e=>{d0=gridOn()&&e.touches.length===2?dist(e.touches):0},{passive:true});
+ L.addEventListener("touchmove",e=>{if(!d0||!gridOn()||e.touches.length!==2)return;e.preventDefault();const r=dist(e.touches)/d0;if(r>1.3){setCols(gcols-1);d0=dist(e.touches)}else if(r<.77){setCols(gcols+1);d0=dist(e.touches)}},{passive:false});
+ L.addEventListener("touchend",()=>{d0=0},{passive:true});
+ document.addEventListener("gesturestart",e=>{if(gridOn()&&e.target.closest&&e.target.closest("#l"))e.preventDefault()});
+ L.addEventListener("wheel",e=>{if(!gridOn()||!e.ctrlKey)return;e.preventDefault();const now=Date.now();if(Math.abs(e.deltaY)<2||now-(L._wt||0)<180)return;L._wt=now;setCols(gcols+(e.deltaY>0?1:-1))},{passive:false})})();
+document.querySelectorAll("#sg details.acc").forEach(d=>d.addEventListener("toggle",()=>{if(d.open)document.querySelectorAll("#sg details.acc").forEach(o=>{if(o!==d)o.open=false})}));
 $("gear").onclick=()=>openSettings();
 $("gx").onclick=()=>{$("sg").hidden=true};
 $("ks").onclick=()=>{const k=$("kk").value.trim(),m=$("km").value.trim();
@@ -483,13 +583,13 @@ $("sh").onclick=async()=>{const base=/^https?:$/.test(location.protocol)?locatio
  full="My Mediatheque : catalogue tes films, séries, albums et livres, gratuit et sans compte. Ouvre ce lien dans Safari, puis Partager → « Sur l'écran d'accueil » :\n"+base;
  try{if(navigator.share){await navigator.share({title:"My Mediatheque",text:full});return}}catch(e){if(e&&e.name==="AbortError")return}
  try{await navigator.clipboard.writeText(full);$("sgs").textContent="Lien copié : colle-le dans un message."}catch(e){$("sgs").textContent="Lien à envoyer : "+base}};
-const COLS=["Titre","Réalisateur","Durée (min)","Genre","Année de sortie","Acteurs principaux","Support","Maison de production","Note","Vu le","Prêté à","Prêté le","Commentaire","Liste","Affiche","Synopsis","Type","Saisons","Épisodes","Saisons vues","Saisons possédées","Épisodes possédés","Détail épisodes par saison","Total épisodes"];
+const COLS=["Titre","Réalisateur","Durée (min)","Genre","Année de sortie","Acteurs principaux","Support","Maison de production","Note","Vu le","Prêté à","Prêté le","Commentaire","Liste","Affiche","Synopsis","Type","Saisons","Épisodes","Saisons vues","Saisons possédées","Épisodes possédés","Détail épisodes par saison","Total épisodes","ISBN"];
 const cell=v=>{v=String(v===undefined||v===null?"":v);return /[;"\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
 async function out(name,text){const blob=new Blob(["\uFEFF"+text],{type:"text/csv;charset=utf-8"});const file=new File([blob],name,{type:"text/csv"});
  try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});return true}}catch(e){if(e&&e.name==="AbortError")return false}
  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);return true}
 $("ex").onclick=async()=>{if(!D.length){$("sgs").textContent="Rien à exporter pour l'instant.";return}
- const rows=[...D].sort((a,b)=>key(a.t).localeCompare(key(b.t),"fr")).map(x=>[x.t,x.r,x.d,x.g,x.y,x.a,x.s,x.p,x.n===undefined?"":String(x.n).replace(".",","),x.vu||"",x.l?x.l.n:"",x.l?x.l.d:"",x.c||"",x.wl?"souhait":"",x.pi||"",x.ov||"",x.k==="s"?"série":x.k==="m"?"musique":x.k==="b"?"livre":"",x.ns||"",x.ne||"",x.sw||"",x.seasonsOwned?x.seasonsOwned.join(","):"",x.ownedEpisodes===undefined?"":x.ownedEpisodes,x.seasonEpisodes?JSON.stringify(x.seasonEpisodes):"",x.episodesTotal||""].map(cell).join(";"));
+ const rows=[...D].sort((a,b)=>key(a.t).localeCompare(key(b.t),"fr")).map(x=>[x.t,x.r,x.d,x.g,x.y,x.a,x.s,x.p,x.n===undefined?"":String(x.n).replace(".",","),x.vu||"",x.l?x.l.n:"",x.l?x.l.d:"",x.c||"",x.wl?"souhait":"",x.pi||"",x.ov||"",x.k==="s"?"série":x.k==="m"?"musique":x.k==="b"?"livre":"",x.ns||"",x.ne||"",x.sw||"",x.seasonsOwned?x.seasonsOwned.join(","):"",x.ownedEpisodes===undefined?"":x.ownedEpisodes,x.seasonEpisodes?JSON.stringify(x.seasonEpisodes):"",x.episodesTotal||"",x.isbn||""].map(cell).join(";"));
  const stamp=new Date().toISOString().replace(/[:.]/g,"-").slice(0,19);if(await out("mediatheque.csv",[COLS.map(cell).join(";"),...rows].join("\r\n"))){try{localStorage.setItem("mt_bk",new Date().toISOString());localStorage.setItem("mt_chg","0")}catch(e){}$("sgs").textContent=D.length+" lignes exportées. Si iOS propose « Remplacer », choisis-le.";bkCheck()}};
 function parseCSV(t){t=t.replace(/^\uFEFF/,"");const first=t.split(/\r?\n/)[0],dl=(first.match(/;/g)||[]).length>=(first.match(/,/g)||[]).length?";":",";
  const rows=[];let r=[],c="",q=false;
@@ -506,11 +606,11 @@ $("im").onclick=()=>$("imf").click();
 $("imf").onchange=async()=>{const file=$("imf").files[0];$("imf").value="";if(!file)return;
  try{const rows=parseCSV(await file.text());if(rows.length<2)throw 0;await snap("avant import");
   const H=rows[0].map(hk),ix=p=>H.findIndex(h=>p.some(q=>h===q||h.startsWith(q)));
-  const I={t:ix(["titre"]),r:ix(["realisateur"]),d:ix(["duree"]),g:ix(["genre"]),y:ix(["annee"]),a:ix(["acteurs"]),s:ix(["support"]),p:ix(["maisondeproduction","production"]),n:ix(["note"]),vu:ix(["vule"]),lo:ix(["pretea"]),ld:ix(["pretele"]),c:ix(["commentaire"]),wl:ix(["liste"]),po:ix(["affiche"]),ov:ix(["synopsis"]),k:ix(["type"]),ns:ix(["saisons"]),ne:ix(["episodes"]),sw:ix(["saisonsvues"]),owned:ix(["saisonspossedees"]),oe:ix(["episodespossedes"]),se:ix(["detailepisodesparsaison"]),et:ix(["totalepisodes"])};
+  const I={t:ix(["titre"]),r:ix(["realisateur"]),d:ix(["duree"]),g:ix(["genre"]),y:ix(["annee"]),a:ix(["acteurs"]),s:ix(["support"]),p:ix(["maisondeproduction","production"]),n:ix(["note"]),vu:ix(["vule"]),lo:ix(["pretea"]),ld:ix(["pretele"]),c:ix(["commentaire"]),wl:ix(["liste"]),po:ix(["affiche"]),ov:ix(["synopsis"]),k:ix(["type"]),ns:ix(["saisons"]),ne:ix(["episodes"]),sw:ix(["saisonsvues"]),owned:ix(["saisonspossedees"]),oe:ix(["episodespossedes"]),se:ix(["detailepisodesparsaison"]),et:ix(["totalepisodes"]),isbn:ix(["isbn"])};
   if(I.t<0)throw 0;
   const g=(r,k)=>I[k]<0?"":(r[I[k]]||"");const byId=new Map(D.map(x=>[x.id,x]));const canonical=x=>[(x.k||"f"),sk(x.t),x.k==="m"||x.k==="b"?key(x.r):"",x.y||""].join("|");const byCanonical=new Map(D.map(x=>[canonical(x),x]));let add=0,upd=0;const batch=[];
   rows.slice(1).forEach(r=>{const t=cl(g(r,"t"));if(!t)return;const y=pi(g(r,"y"));const ks=/s[ée]rie/i.test(g(r,"k")),km=/musique/i.test(g(r,"k")),kb=/livre/i.test(g(r,"k"));let id=mkid(km||kb?t+" · "+cl(g(r,"r")):t,y)+(ks?"|s":km?"|m":kb?"|b":"");
-   const f={id,t,r:cl(g(r,"r")),d:pi(g(r,"d")),g:cl(g(r,"g")),y,a:cl(g(r,"a")),s:supOf(g(r,"s")),p:cl(g(r,"p"))};{const vu=cl(g(r,"vu")),lo=cl(g(r,"lo")),ld=cl(g(r,"ld")),cm=g(r,"c").trim(),po=cl(g(r,"po")),ov=g(r,"ov").trim();if(vu)f.vu=vu;if(lo)f.l={n:lo,d:ld||today()};if(cm)f.c=cm;if(/souhait/i.test(g(r,"wl")))f.wl=1;if(po)f.pi=po;if(ov)f.ov=ov;if(ks){f.k="s";const a=pi(g(r,"ns")),b=pi(g(r,"ne")),c=pi(g(r,"sw"));if(a)f.ns=a;if(b)f.ne=b;if(c)f.sw=c;const owned=cl(g(r,"owned")),oe=pi(g(r,"oe")),se=cl(g(r,"se"));if(owned)f.seasonsOwned=owned.split(",").map(Number).filter(Number.isFinite);if(oe)f.ownedEpisodes=oe;if(se){try{f.seasonEpisodes=JSON.parse(se)}catch(e){}}const et=pi(g(r,"et"));if(et)f.episodesTotal=et;}if(km)f.k="m";if(kb)f.k="b"}
+   const f={id,t,r:cl(g(r,"r")),d:pi(g(r,"d")),g:cl(g(r,"g")),y,a:cl(g(r,"a")),s:supOf(g(r,"s")),p:cl(g(r,"p"))};{const vu=cl(g(r,"vu")),lo=cl(g(r,"lo")),ld=cl(g(r,"ld")),cm=g(r,"c").trim(),po=cl(g(r,"po")),ov=g(r,"ov").trim();if(vu)f.vu=vu;if(lo)f.l={n:lo,d:ld||today()};if(cm)f.c=cm;if(/souhait/i.test(g(r,"wl")))f.wl=1;if(po)f.pi=po;{const ib=cl(g(r,"isbn"));if(ib)f.isbn=ib}if(ov)f.ov=ov;if(ks){f.k="s";const a=pi(g(r,"ns")),b=pi(g(r,"ne")),c=pi(g(r,"sw"));if(a)f.ns=a;if(b)f.ne=b;if(c)f.sw=c;const owned=cl(g(r,"owned")),oe=pi(g(r,"oe")),se=cl(g(r,"se"));if(owned)f.seasonsOwned=owned.split(",").map(Number).filter(Number.isFinite);if(oe)f.ownedEpisodes=oe;if(se){try{f.seasonEpisodes=JSON.parse(se)}catch(e){}}const et=pi(g(r,"et"));if(et)f.episodesTotal=et;}if(km)f.k="m";if(kb)f.k="b"}
    const n=pn(g(r,"n")),old=byId.get(id)||byCanonical.get(canonical(f));if(old)f.id=old.id;
    if(old){if(n===undefined&&old.n!==undefined)f.n=old.n;if(old.v)f.v=old.v;const imported=Object.fromEntries(Object.entries(f).filter(([k,v])=>k==="id"||(v!==""&&v!==undefined&&v!==null)));Object.assign(old,imported);if(n!==undefined)old.n=n;batch.push(old);upd++}
    else{if(n!==undefined)f.n=n;D.push(f);byId.set(f.id,f);byCanonical.set(canonical(f),f);batch.push(f);add++}});
