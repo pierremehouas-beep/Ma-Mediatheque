@@ -1,7 +1,7 @@
 /* My Mediatheque — cache limité à cette application */
-const CACHE = "my-mediatheque-v8";
+const CACHE = "my-mediatheque-v10";
 const APP_SHELL = ["./", "./index.html", "./style.css", "./app.js"];
-const OPTIONAL = ["./manifest.json", "./icon-192.png", "./icon-512.png"];
+const OPTIONAL = ["./manifest.json", "./icon-192.png", "./icon-512.png", "./sync.js"];
 const IMG_MAX = 250;       // nombre maximal d'affiches gardées pour le hors-ligne
 const NET_TIMEOUT = 4000;  // réseau trop lent : on sert la copie en cache
 

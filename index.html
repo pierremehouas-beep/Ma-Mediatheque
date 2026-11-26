@@ -39,14 +39,26 @@
 <p class="hint">Envoie l'appli à tes potes : ils l'ouvrent, l'ajoutent à l'écran d'accueil (sur Android ou PC : menu du navigateur → « Installer l'application »), et c'est parti.</p>
 <div class="row"><button id="sh" class="pri" style="flex:1">Partager l'appli</button></div>
 <div class="row" id="instr" hidden><button id="inst" class="pri" style="flex:1">Installer l'appli sur cet appareil</button></div></div></details>
+<details class="acc" id="acC"><summary>☁️ Synchronisation</summary><div class="accb">
+<p class="hint">Facultatif : relie tes appareils (iPhone, PC…) pour retrouver la même collection partout. L'appli marche exactement pareil sans. Compte gratuit : email + mot de passe de ton choix.</p>
+<div id="syl"><div class="row"><input id="sym" type="email" placeholder="Email" autocomplete="username" autocapitalize="off" spellcheck="false"></div>
+<div class="row"><input id="syp" type="password" placeholder="Mot de passe (6 caractères min.)" autocomplete="current-password"></div>
+<div class="row"><button id="syi" class="pri" style="flex:1">Se connecter</button><button id="syc" style="flex:1">Créer un compte</button></div>
+<div class="row"><button id="syf" class="z0" style="flex:1">Mot de passe oublié ?</button></div></div>
+<div id="syo" hidden><div class="row"><button id="syn" class="pri" style="flex:1">Synchroniser maintenant</button><button id="syx" style="flex:1">Se déconnecter</button></div></div>
+<div id="sys" class="hint"></div></div></details>
 <details class="acc" id="acS"><summary>💾 Sauvegarder</summary><div class="accb">
 <p class="hint">Ta collection vit dans la mémoire de ce navigateur : exporte un CSV de temps en temps. Sur iPhone : Réglages → Apps → Safari → Téléchargements, puis choisis un dossier dédié dans Fichiers pour les téléchargements de Safari.</p>
 <div class="row"><button id="ex" style="flex:1">Exporter en CSV</button><button id="im" style="flex:1">Importer un CSV</button></div><input id="imf" type="file" accept=".csv,text/csv,text/plain,.txt" hidden></div></details>
 <details class="acc" id="acV"><summary>🕘 Versions de secours</summary><div class="accb">
 <p class="hint">Copies automatiques gardées sur cet appareil (5 max) : une par jour, et avant chaque import, vidage ou restauration.</p><div id="snl"></div></div></details>
-<details class="acc" id="acA"><summary>🖼️ Affiches et synopsis</summary><div class="accb">
-<p class="hint">Les récupère pour tous les films déjà dans ta collection (via TMDB). Un titre ambigu peut tomber sur le mauvais film : relis les affiches.</p>
-<div class="row"><button id="enb" style="flex:1">Récupérer les affiches</button></div></div></details>
-<p class="hint" style="font-size:12px;margin-top:14px">Données : TMDB (ce produit utilise l'API TMDB mais n'est ni approuvé ni certifié par TMDB), Wikidata (CC0), Google Livres, Open Library et MusicBrainz.</p>
+<details class="acc" id="acA"><summary>🖼️ Récupération des visuels et résumés</summary><div class="accb">
+<p class="hint">Complète les fiches de ta collection et de tes souhaits avec ce qui manque, sans jamais écraser ce que tu as saisi ou corrigé :<br>🎬 Films et séries : affiche, synopsis, genre, acteurs… (TMDB, clé requise)<br>📚 Livres : couverture, résumé, auteur, éditeur, pages (Google Livres, Open Library)<br>🎵 Musique : pochette, liste des titres, style (MusicBrainz, Cover Art Archive)<br>Un titre ambigu peut tomber sur la mauvaise fiche : relis après coup. Tu peux arrêter à tout moment, ce qui est déjà récupéré est gardé.</p>
+<div class="row"><button id="enb" class="pri" style="flex:1">Tout récupérer</button></div>
+<div class="row"><button id="enF" style="flex:1">Films et séries</button><button id="enB" style="flex:1">Livres</button><button id="enM" style="flex:1">Musique</button></div>
+<div class="row"><button id="enX" hidden style="flex:1">Arrêter</button></div>
+<label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="enR"> Réessayer aussi les fiches déjà marquées « introuvables »</label>
+<div id="enS" class="hint"></div></div></details>
+<p class="hint" style="font-size:12px;margin-top:14px">Données : TMDB (ce produit utilise l'API TMDB mais n'est ni approuvé ni certifié par TMDB), Wikidata (CC0), Google Livres, Open Library, MusicBrainz et Cover Art Archive.</p>
 <button id="clr" class="z0" style="width:100%;margin-top:6px">Vider la collection</button><p class="cr">© El Pedro - PopCruz Production</p></div></div>
-<script src="./app.js" defer></script></body></html>
+<script src="./app.js" defer></script><script src="./sync.js" defer></script></body></html>
