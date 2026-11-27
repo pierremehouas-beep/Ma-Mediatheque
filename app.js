@@ -2,7 +2,7 @@
 const $=i=>document.getElementById(i);
 const KEY="mt_gemini_key",MOD="mt_gemini_model",DEF_MOD="gemini-flash-lite-latest";
 let D=[],db=null,asc=true,sup=new Set(),nn=false,G=[];
-let quiet=0;const bump=()=>{if(quiet)return;try{localStorage.setItem("mt_chg",(+localStorage.getItem("mt_chg")||0)+1)}catch(e){}};
+let quiet=0;const dus=new Set();let ownN=null;const bump=()=>{if(quiet)return;try{localStorage.setItem("mt_chg",(+localStorage.getItem("mt_chg")||0)+1)}catch(e){}};
 /* ---------- IndexedDB (base créée vierge au premier lancement) ---------- */
 const idb=(m,fn)=>(m==="readwrite"&&bump(),db)?new Promise((res,rej)=>{const tx=db.transaction("films",m),r=fn(tx.objectStore("films"));tx.oncomplete=()=>res(r&&r.result);tx.onerror=tx.onabort=()=>rej(tx.error)}):Promise.reject(new Error("Base de données indisponible"));
 const openDB=()=>new Promise((res,rej)=>{const q=indexedDB.open("mediatheque",2);q.onupgradeneeded=()=>{const d=q.result;if(!d.objectStoreNames.contains("films"))d.createObjectStore("films",{keyPath:"id"});if(!d.objectStoreNames.contains("snap"))d.createObjectStore("snap",{keyPath:"id"})};q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)});
@@ -30,8 +30,8 @@ function lists(){G=[...new Set(D.filter(isT).flatMap(x=>x.g.split(" / ").filter(
  $("g").innerHTML='<option value="">Tous les '+(typ==="m"?"styles":"genres")+'</option>';G.forEach(g=>opt($("g"),g));$("g").value=gv;{const sv=$("sgn").value;$("sgn").innerHTML='<option value="">Tous les '+(typ==="m"?"styles":"genres")+'</option>';G.forEach(g=>opt($("sgn"),g));$("sgn").value=sv}
  $("dc").innerHTML='<option value="">Toutes les années</option>';[...new Set(D.filter(isT).map(x=>dec(x.y)).filter(Boolean))].sort((a,b)=>a-b).forEach(d=>opt($("dc"),d,"Années "+d));$("dc").value=dv;
  [["lr",x=>sp(x.r)],["la",x=>sp(x.a)],["lp",x=>sp(x.p)]].forEach(([id,f])=>{$(id).innerHTML="";uniq(f).forEach(v=>opt($(id),v))})}
-const cmp={t:x=>key(x.t),r:x=>key(x.r),y:x=>x.y,l:x=>x.d,g:x=>key(x.g),n:x=>x.n===undefined?"":x.n,a:x=>key(x.a),p:x=>key(x.p),s:x=>key(x.s)};
-const sortGroup=(x,k)=>k==="l"?(x.d?tr(x.d):(x.k==="b"?"Pages non renseignées":"Durée non renseignée")):k==="y"?(x.y||"Année non renseignée"):k==="n"?(x.n===undefined?"Sans note":x.n+" ★"):k==="r"?(x.r||(x.k==="b"?"Auteur non renseigné":"Réalisateur / artiste non renseigné")):k==="g"?(x.g||"Genre non renseigné"):k==="a"?(x.a||"Acteur / artiste non renseigné"):k==="p"?(x.p||(x.k==="b"?"Éditeur non renseigné":"Production / label non renseigné")):k==="s"?(x.s||"Support non renseigné"):"";
+const cmp={t:x=>key(x.t),r:x=>key(x.r),y:x=>x.y,l:x=>x.d,g:x=>key(x.g),n:x=>x.n===undefined?"":x.n,a:x=>key(x.a),p:x=>key(x.p),s:x=>key(x.s),da:x=>x.da||""};
+const sortGroup=(x,k)=>k==="l"?(x.d?tr(x.d):(x.k==="b"?"Pages non renseignées":"Durée non renseignée")):k==="y"?(x.y||"Année non renseignée"):k==="n"?(x.n===undefined?"Sans note":x.n+" ★"):k==="r"?(x.r||(x.k==="b"?"Auteur non renseigné":"Réalisateur / artiste non renseigné")):k==="g"?(x.g||"Genre non renseigné"):k==="a"?(x.a||"Acteur / artiste non renseigné"):k==="p"?(x.p||(x.k==="b"?"Éditeur non renseigné":"Production / label non renseigné")):k==="s"?(x.s||"Support non renseigné"):k==="da"?(x.da?"Ajouté le "+new Date(x.da).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"}):"Date d'ajout inconnue"):"";
 const rt=v=>{v=v||0;let h="";for(let i=1;i<=5;i++){const d=Math.max(0,Math.min(1,v-(i-1)));h+=`<span class="st"><i class="bg">★</i><i class="fg" style="clip-path:inset(0 ${100-d*100}% 0 0)">★</i><b data-v="${i-.5}"></b><b data-v="${i}"></b></span>`}return '<button class="z" data-v="0" style="margin-left:0;margin-right:4px">0</button>'+h+'<button class="z" data-v="">Effacer</button>'};
 const count=()=>{const k=D.filter(x=>isT(x)&&x.n!==undefined).length;return k?" · "+k+" noté"+(k>1?"s":""):""};
 const card=id=>[...$("l").children].find(c=>c.dataset.id===id);
@@ -48,12 +48,12 @@ const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOStr
 const tlHTML=ov=>{let n=0,h='<div class="tl">';String(ov).split(/\r?\n/).map(s=>s.trim()).filter(Boolean).forEach(s=>{if(s.startsWith("## ")){n=0;h+='<div class="tlh">'+esc(s.slice(3))+'</div>'}else{n++;h+='<div class="tk"><span>'+n+'.</span><div>'+esc(s.replace(/^\d+[.)]\s+/,""))+'</div></div>'}});return h+"</div>"};
 function rowHTML(x,open){
  const S=x.k==="s",M=x.k==="m",B=x.k==="b",sw=x.sw||0,ow=S?own(x):0;const vup=S?'<span class="sp">Saisons vues</span><button class="z sdn">−</button><b>'+sw+' / '+(x.ns||ow?ow:"?")+'</b><button class="z sin">+</button>'+(ow&&sw<ow?'<button class="z sall">Tout vu</button>':""):(x.vu?'<label class="vl">'+(M?"Écouté le":B?"Lu le":"Vu le")+' <input type="date" class="vd" value="'+esc(x.vu)+'"></label><button class="z vub">'+(M?"Pas écouté":B?"Pas lu":"Pas vu")+'</button>':'<button class="pri vub">'+(M?"✓ Marquer comme écouté":B?"✓ Marquer comme lu":"✓ Marquer comme vu")+'</button>');const acts=x.wl?'<button class="pri own">✓ Je l\'ai ! Ajouter à ma collection</button>':(x.l?'<span class="w">Prêté à '+esc(x.l.n)+' depuis le '+fd(x.l.d)+'</span><button class="z lnb">Rendu</button>':'<button class="z lnb">Prêter…</button>');const rows2=x.wl?"":'<div class="ac vr'+(S?"":" nw")+'">'+vup+'</div>'+(S?'<div class="ac vr"><span class="sp">Saisons possédées</span><b>'+ow+' / '+(x.ns||ow?x.ns||ow:"?")+'</b></div>':"");
- return `<div class="it ${SC[x.s]||""}${open?" open":""}" data-id="${esc(x.id)}" tabindex="0"><div class="rw">${x.pi?`<img class="pz${M?" sq":""}" loading="lazy" alt="" onerror="this.remove()" src="${esc(pimg(x.pi,gridOn()?(gcols<=2?"w500":"w342"):"w154"))}">`:""}<div class="rb"><div class="top"><div class="t">${esc(x.t)}</div><span class="nt">${x.wl?"":nl(x.n)}</span></div><div class="m">${((pre,suf)=>esc(pre)+(x.s?(pre?", ":"")+'<span class="fm">'+esc(x.s)+'</span>':"")+esc(suf))([x.r,x.y,S?(x.ns?(own(x)+" / "+x.ns+" saison"+(x.ns>1?"s":"")):""):M?(x.d?x.d+" min":""):B?(x.d?x.d+" p.":""):fmt(x.d),S?(x.ownedEpisodes!==undefined?x.ownedEpisodes+" / "+(x.episodesTotal||x.ne||0)+" épisodes possédés":(x.ne?x.ne+" épisodes":"")):""].filter(Boolean).join(", "),(S?(seen(x)?" · ✓ terminée":prog(x)?" · en cours "+sw+"/"+own(x):""):(x.vu?(M?" · ✓ écouté":B?" · ✓ lu":" · ✓ vu"):""))+(x.l?" · prêté à "+x.l.n:""))}</div></div></div><div class="d">${x.ov?(M?tlHTML(x.ov):`<p class="ov">${esc(x.ov)}</p>`):""}<p><b>${M?"Style":"Genre"} :</b> ${esc(x.g||"à compléter")}</p>${M||B?"":`<p><b>Avec :</b> ${esc(x.a||"à compléter")}</p>`}<p><b>${M?"Label":B?"Éditeur":"Production"} :</b> ${esc(x.p||"à compléter")}</p><div class="ac"><select class="sup" aria-label="Support">${SUP.map(v=>`<option${v===x.s?" selected":""}>${v}</option>`).join("")}</select>${acts}</div>${rows2}${x.wl?"":`<div class="rt">${rt(x.n)}</div>`}<textarea class="cm" rows="2" placeholder="Commentaire, souvenir, état du disque…">${esc(x.c||"")}</textarea><p><a href="${esc(M?"https://musicbrainz.org/search?type=release_group&query="+encodeURIComponent(x.r+" "+x.t):B?"https://www.babelio.com/resrecherche.php?Recherche="+encodeURIComponent(x.t+" "+(x.r||"")):yurl(x.t))}" target="_blank" rel="noopener">${M?"Voir sur MusicBrainz":B?"Voir sur Babelio":"Voir sur Allociné"}</a> · <a href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(B?"couverture livre "+(x.r||"")+" "+x.t:(M?"pochette ":"jaquette ")+x.s+" "+(M?x.r+" ":"")+x.t+(x.y?" "+x.y:""))}" target="_blank" rel="noopener">${M?"Voir la pochette":B?"Voir la couverture":"Voir la jaquette"}</a></p>${x.v?'<p class="w">Ajouté depuis l\'appli : infos à vérifier <button class="z vfy">✓ C\'est vérifié</button></p>':""}<div class="fbar"><button class="z0 del">${x.wl?"Retirer de mes souhaits":"Retirer de la collection"}</button><button class="edit-item" type="button" title="Modifier la fiche" aria-label="Modifier la fiche"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6.5A2.5 2.5 0 0 0 4 5.5v13A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V11"/><path d="M18.4 2.6a1.9 1.9 0 0 1 2.7 2.7L12 14.4 8.5 15.5l1.1-3.5z"/></svg></button></div></div></div>`}
+ return `<div class="it ${SC[x.s]||""}${open?" open":""}" data-id="${esc(x.id)}" tabindex="0"><div class="rw">${x.pi?`<img class="pz${M?" sq":""}" loading="lazy" alt="" onerror="this.remove()" src="${esc(pimg(x.pi,gridOn()?(gcols<=2?"w500":"w342"):"w154"))}">`:""}<div class="rb"><div class="top"><div class="t">${esc(x.t)}</div><span class="nt">${x.wl?"":nl(x.n)}</span></div><div class="m">${((pre,suf)=>esc(pre)+(x.s?(pre?", ":"")+'<span class="fm">'+esc(x.s)+'</span>':"")+esc(suf))([x.r,x.y,S?(x.ns?(own(x)+" / "+x.ns+" saison"+(x.ns>1?"s":"")):""):M?(x.d?x.d+" min":""):B?(x.d?x.d+" p.":""):fmt(x.d),S?(x.ownedEpisodes!==undefined?x.ownedEpisodes+" / "+(x.episodesTotal||x.ne||0)+" épisodes possédés":(x.ne?x.ne+" épisodes":"")):""].filter(Boolean).join(", "),(S?(seen(x)?" · ✓ terminée":prog(x)?" · en cours "+sw+"/"+own(x):""):(x.vu?(M?" · ✓ écouté":B?" · ✓ lu":" · ✓ vu"):""))+(x.l?" · prêté à "+x.l.n:""))}</div></div></div><div class="d">${x.ov?(M?tlHTML(x.ov):`<p class="ov">${esc(x.ov)}</p>`):""}<p><b>${M?"Style":"Genre"} :</b> ${esc(x.g||"à compléter")}</p>${M||B?"":`<p><b>Avec :</b> ${esc(x.a||"à compléter")}</p>`}<p><b>${M?"Label":B?"Éditeur":"Production"} :</b> ${esc(x.p||"à compléter")}</p>${x.da?`<p><b>Ajouté le :</b> ${new Date(x.da).toLocaleDateString("fr-FR")}</p>`:""}<div class="ac"><select class="sup" aria-label="Support">${SUP.map(v=>`<option${v===x.s?" selected":""}>${v}</option>`).join("")}</select>${acts}</div>${rows2}${x.wl?"":`<div class="rt">${rt(x.n)}</div>`}<textarea class="cm" rows="2" placeholder="Commentaire, souvenir, état du disque…">${esc(x.c||"")}</textarea><p><a href="${esc(M?"https://musicbrainz.org/search?type=release_group&query="+encodeURIComponent(x.r+" "+x.t):B?"https://www.babelio.com/resrecherche.php?Recherche="+encodeURIComponent(x.t+" "+(x.r||"")):yurl(x.t))}" target="_blank" rel="noopener">${M?"Voir sur MusicBrainz":B?"Voir sur Babelio":"Voir sur Allociné"}</a> · <a href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(B?"couverture livre "+(x.r||"")+" "+x.t:(M?"pochette ":"jaquette ")+x.s+" "+(M?x.r+" ":"")+x.t+(x.y?" "+x.y:""))}" target="_blank" rel="noopener">${M?"Voir la pochette":B?"Voir la couverture":"Voir la jaquette"}</a></p>${x.v?'<p class="w">Ajouté depuis l\'appli : infos à vérifier <button class="z vfy">✓ C\'est vérifié</button></p>':""}<div class="fbar"><button class="z0 del">${x.wl?"Retirer de mes souhaits":"Retirer de la collection"}</button><button class="edit-item" type="button" title="Modifier la fiche" aria-label="Modifier la fiche"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6.5A2.5 2.5 0 0 0 4 5.5v13A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V11"/><path d="M18.4 2.6a1.9 1.9 0 0 1 2.7 2.7L12 14.4 8.5 15.5l1.1-3.5z"/></svg></button></div></div></div>`}
 function refresh(id,open){const f=D.find(x=>x.id===id),c=card(id);if(f&&c)c.outerHTML=rowHTML(f,open===undefined?c.classList.contains("open"):open)}
 function draw(){
   {const qv=$("q").value,hasF=document.activeElement===$("q");if(qv&&$("q").hidden)qOpen(true);else if(!qv&&!$("q").hidden&&!hasF)qOpen(false)}
- const q=sk($("q").value.trim()),g=$("g").value,s=$("s").value,f=cmp[s],du=$("du").value,dc=$("dc").value,nm=$("nm").value,fr=key($("fr").value.trim()),fa=key($("fa").value.trim()),fp=key($("fpr").value.trim()),st=$("st").value,W=view==="w";
- let r=D.filter(x=>isT(x)&&W===!!x.wl&&(!q||sk(x.t+" "+x.r+" "+x.a+" "+x.p).includes(q))&&(!g||x.g.split(" / ").includes(g))&&(!sup.size||sup.has(x.s))&&(!nn||x.n===undefined)&&(!du||tr(x.d)===du)&&(!dc||String(dec(x.y))===dc)&&(!nm||x.n>=+nm)&&(!fr||key(x.r).includes(fr))&&(!fa||key(x.a).includes(fa))&&(!fp||key(x.p).includes(fp))&&(!st||(st==="vu"?seen(x):st==="nv"?!seen(x):st==="en"?prog(x):x.l)));
+ const q=sk($("q").value.trim()),g=$("g").value,s=$("s").value,f=cmp[s],du=[...dus].join("|"),dc=$("dc").value,nm=$("nm").value,fr=key($("fr").value.trim()),fa=key($("fa").value.trim()),fp=key($("fpr").value.trim()),st=$("st").value,W=view==="w";
+ let r=D.filter(x=>isT(x)&&W===!!x.wl&&(!q||sk(x.t+" "+x.r+" "+x.a+" "+x.p).includes(q))&&(!g||x.g.split(" / ").includes(g))&&(!sup.size||sup.has(x.s))&&(!nn||x.n===undefined)&&(!dus.size||dus.has(tr(x.d)))&&(!dc||String(dec(x.y))===dc)&&(!nm||x.n>=+nm)&&(!fr||key(x.r).includes(fr))&&(!fa||key(x.a).includes(fa))&&(!fp||key(x.p).includes(fp))&&(!st||(st==="vu"?seen(x):st==="nv"?!seen(x):st==="en"?prog(x):x.l)));
  r.sort((a,b)=>{let p=f(a),c=f(b);if(p===""&&c!=="")return 1;if(c===""&&p!=="")return -1;const z=typeof p==="number"?p-c:String(p).localeCompare(String(c),"fr");return (asc?z:-z)||key(a.t).localeCompare(key(b.t),"fr")});
  const na=[g,du,dc,nm,fr,fa,fp,st,$("su").value].filter(Boolean).length+(nn?1:0);$("fb").textContent=na?"Filtres ("+na+")":"Filtres";
  const T=D.filter(isT),N=T.filter(x=>!x.wl).length,tot=W?T.length-N:N,wd=typ==="s"?" série":typ==="m"?" album":typ==="b"?" livre":" film";
@@ -66,14 +66,61 @@ function draw(){
 function rate(id,v){const f=D.find(x=>x.id===id);if(!f)return;if(v===""||f.n===+v)delete f.n;else f.n=+v;put(f);
  const c=card(id);if(c){c.querySelector(".rt").innerHTML=rt(f.n);c.querySelector(".nt").textContent=nl(f.n)}
  $("n").textContent=$("n").textContent.replace(/ · \d+ notés?$/,"")+count()}
-async function enrich(f){if(f.k==="m"||f.k==="b"||f.pi||f.eq||!tkey())return false;
- try{const S=f.k==="s",nms=x=>[x.title,x.original_title,x.name,x.original_name];
-  const r=(await tget(S?"/search/tv":"/search/movie",{query:f.t,language:"fr-FR",include_adult:"false"})).results||[];
-  /* on n'accepte qu'un titre vraiment proche : pas d'affiche plutôt qu'une mauvaise affiche */
-  const sc=r.filter(x=>tmScore(f.t,nms(x))>=60).map(x=>({x,s:rank(f.t,f.y,nms(x),(x.release_date||x.first_air_date||"").slice(0,4),x.vote_count,x.popularity,x.poster_path)})).sort((a,b)=>b.s-a.s),m=(sc[0]||{}).x;
-  quiet=1;if(!m||(!m.poster_path&&!m.overview)){f.eq=1;put(f);quiet=0;return false}
-  if(m.poster_path)f.pi=m.poster_path;if(m.overview)f.ov=m.overview;put(f);quiet=0;return true}
- catch(e){quiet=0;return false}}
+/* ---------- récupération des visuels et résumés (films, séries, livres, albums) ----------
+   Règle d'or : on ne remplit QUE les champs vides, on n'écrase jamais ce que tu as saisi ou corrigé. */
+const hasTxt=v=>v!==undefined&&v!==null&&String(v).trim()!=="";
+const imgOK=u=>new Promise(r=>{const i=new Image(),t=setTimeout(()=>{i.src="";r(false)},10000);i.onload=()=>{clearTimeout(t);r(true)};i.onerror=()=>{clearTimeout(t);r(false)};i.src=u});
+function fillGaps(f,p){let n=0;for(const k of["pi","ov","r","y","d","g","a","p"])if(!hasTxt(f[k])&&hasTxt(p[k])){f[k]=p[k];n++}return n}
+/* films et séries : TMDB (clé perso) — affiche, synopsis, + genre, acteurs, réalisateur, durée, production si vides */
+async function patchVideo(f){const S=f.k==="s",nms=x=>[x.title,x.original_title,x.name,x.original_name];
+ const r=(await tget(S?"/search/tv":"/search/movie",{query:f.t,language:"fr-FR",include_adult:"false"})).results||[];
+ /* on n'accepte qu'un titre vraiment proche : pas d'affiche plutôt qu'une mauvaise affiche */
+ const sc=r.filter(x=>tmScore(f.t,nms(x))>=60).map(x=>({x,s:rank(f.t,f.y,nms(x),(x.release_date||x.first_air_date||"").slice(0,4),x.vote_count,x.popularity,x.poster_path)})).sort((a,b)=>b.s-a.s),m=(sc[0]||{}).x;
+ if(!m)return null;
+ let d=null;try{d=await tget((S?"/tv/":"/movie/")+m.id,{language:"fr-FR",append_to_response:"credits"})}catch(e){if(e&&e.status===401)throw e}
+ const cr=(d&&d.credits)||{},z=d||m,yr=(z.release_date||z.first_air_date||"").slice(0,4),pc=S?((z.production_companies&&z.production_companies.length)?z.production_companies:(z.networks||[])):(z.production_companies||[]);
+ return{pi:z.poster_path||m.poster_path||"",ov:z.overview||m.overview||"",
+  r:S?(z.created_by||[]).map(x=>x.name).join(", "):(cr.crew||[]).filter(x=>x.job==="Director").map(x=>x.name).join(", "),
+  g:(z.genres||[]).slice(0,3).map(x=>x.name).join(" / "),a:(cr.cast||[]).slice(0,5).map(x=>x.name).join(", "),
+  p:pc.slice(0,3).map(x=>x.name).join(", "),d:S?((z.episode_run_time||[])[0]||(z.last_episode_to_air||{}).runtime||""):(z.runtime||""),y:+yr||""}}
+/* livres : Google Livres + Open Library (sans clé) — couverture, résumé, + auteur, année, pages, éditeur si vides */
+async function patchBook(f){const t=f.t,au=f.r||"",n=f.isbn?isbnNorm(f.isbn):null,q=v=>String(v||"").replace(/"/g," ").replace(/\s+/g," ").trim();
+ const rs=await Promise.allSettled([n?isbnGB(n):[],n?isbnOL(n):[],
+  gbSearch('intitle:"'+q(t)+'"'+(au?' inauthor:"'+q(au)+'"':""),8),
+  olSearch("title="+encodeURIComponent(q(t))+(au?"&author="+encodeURIComponent(q(au)):""))]);
+ const bad=rs.filter(r=>r.status==="rejected");
+ if(bad.length>=(n?4:2)&&rs.every((r,i)=>r.status==="rejected"||(!n&&i<2)))throw bad[0].reason;
+ const val=i=>rs[i].status==="fulfilled"?rs[i].value:[],ln=sk(au).split(" ").filter(Boolean).pop()||"";
+ const exact=[...val(0),...val(1)]; /* même ISBN = même édition */
+ const near=rankBooks(t,dedupBooks([...val(2),...val(3)]),au).filter(x=>tmScore(t,[x.titre])>=60&&(!ln||!x.realisateur||sk(x.realisateur).includes(ln)));
+ const p={},take=(k,v)=>{if(!hasTxt(p[k])&&hasTxt(v))p[k]=v};
+ [...exact,...near].forEach(x=>{take("pi",x.affiche);take("ov",x.synopsis);take("r",x.realisateur);take("g",x.genre)});
+ /* année, pages, éditeur : seulement la même édition (ISBN) ou la meilleure correspondance */
+ [...exact,...near.slice(0,1)].forEach(x=>{take("y",+x.annee||"");take("d",+x.duree||"");take("p",x.production)});
+ if(!hasTxt(f.ov)&&!p.ov){try{const r=await bookSyn(t,au,n);if(r.length)p.ov=r[0].synopsis}catch(e){}}
+ return p}
+/* albums : MusicBrainz + Cover Art Archive (sans clé) — pochette, liste des titres, + style, année si vides */
+async function patchMusic(f){let rg=String(f.pi||"").startsWith("mb:")?f.pi.slice(3):"",p={};
+ if(!rg||!hasTxt(f.g)||!hasTxt(f.y)){
+  let list=await mbz(f.t,f.y||"",f.r||"");
+  if(!list.length&&f.y){await sleep(1100);list=await mbz(f.t,"",f.r||"")}
+  const x=list.find(z=>tmScore(f.t,[z.titre])>=60&&(!f.r||tmScore(f.r,[z.realisateur])>=50));
+  if(x){const id=String(x.affiche).slice(3);
+   if(!rg)rg=id;
+   if(!f.pi&&await imgOK(pimg(x.affiche,"w154")))p.pi=x.affiche;
+   p.g=x.genre;p.y=+x.annee||""}}
+ if(rg&&!hasTxt(f.ov)){try{await sleep(1100);const t=await mbTracks(rg);if(t)p.ov=t}catch(e){}}
+ return p}
+/* une fiche : renvoie true (complétée), false (rien trouvé), null (erreur réseau, on pourra réessayer) */
+async function enrich(f,bulk){
+ if(!bulk&&(f.k==="m"||f.k==="b"))return false;
+ if(f.eq&&!bulk)return false;
+ const fn=f.k==="m"?patchMusic:f.k==="b"?patchBook:patchVideo;
+ if(fn===patchVideo&&!tkey())return false;
+ try{const p=await fn(f),n=p?fillGaps(f,p):0;
+  if(n)delete f.eq;else f.eq=1;
+  quiet=1;put(f);quiet=0;return n>0}
+ catch(e){quiet=0;enrich.err=e;return null}}
 let fOpen=false;
 function toggleCard(it){const o=!it.classList.contains("open");
  if(o)$("l").querySelectorAll(".it.open").forEach(c=>{if(c!==it)c.classList.remove("open")});
@@ -90,7 +137,7 @@ $("l").onclick=e=>{const it=e.target.closest(".it");if(!it)return;const id=it.da
  const h=e.target.closest(".rt [data-v]");if(h){rate(id,h.dataset.v);return}
  if(e.target.closest(".vub")){if(f.vu)delete f.vu;else f.vu=today();put(f);refresh(id);return}
  if(e.target.closest(".lnb")){if(f.l)delete f.l;else{const n=(prompt("Prêté à qui ?")||"").trim();if(!n)return;f.l={n,d:today()}}put(f);refresh(id);return}
- if(e.target.closest(".own")){delete f.wl;put(f);lists();draw();return}
+ if(e.target.closest(".own")){delete f.wl;f.da=Date.now();put(f);lists();draw();return}
  if(e.target.closest(".rw")){const o=toggleCard(it);if(o&&!f.pi&&!f.eq)enrich(f).then(ok=>{if(ok)refresh(id)});
   if(o&&f.k==="m"&&!f.ov&&(f.pi||"").startsWith("mb:")&&!tq.has(id)){tq.add(id);mbTracks(f.pi.slice(3)).then(t=>{if(t){f.ov=t;put(f);refresh(id)}}).catch(()=>{})}}};
 $("l").onchange=e=>{const it=e.target.closest(".it");if(!it)return;const id=it.dataset.id,f=D.find(x=>x.id===id),t=e.target;if(!f)return;
@@ -128,10 +175,10 @@ function resetSoir(){["sdu","sgn","sdir","sact"].forEach(i=>{const e=$(i);if(e)e
 function setView(v){if(view==="s"&&v!=="s")resetSoir();view=v;document.body.dataset.view=v;applyGrid();document.querySelectorAll("#tb button[data-t]").forEach(b=>b.classList.toggle("on",b.dataset.t===v));
  $("l").hidden=!(v==="c"||v==="w");$("sv").hidden=v!=="s";$("tv").hidden=v!=="t";
  if(v==="t")stats();draw();window.scrollTo(0,0)}
-function setType(t){typ=t;document.body.dataset.t=t;["du","dc","nm","fr","fa","fpr","q","g","su","st","sdu","sgn"].forEach(i=>{const e=$(i);if(e)e.value=""});$("sst").selectedIndex=0;$("s").value="t";asc=true;$("o").textContent=lab();$("pn").hidden=true;$("fb").setAttribute("aria-expanded","false");qOpen(false);window.scrollTo(0,0);sup.clear();nn=false;document.querySelectorAll(".chip[data-k]").forEach(b=>b.setAttribute("aria-pressed","false"));$("v").setAttribute("aria-pressed","false");const S=t==="s";document.querySelectorAll("#ty button[data-y]").forEach(b=>b.classList.toggle("on",b.dataset.y===t));
+function setType(t){typ=t;dus.clear();document.body.dataset.t=t;["du","dc","nm","fr","fa","fpr","q","g","su","st","sdu","sgn"].forEach(i=>{const e=$(i);if(e)e.value=""});$("sst").selectedIndex=0;$("s").value="t";asc=true;$("o").textContent=lab();$("pn").hidden=true;$("fb").setAttribute("aria-expanded","false");qOpen(false);window.scrollTo(0,0);sup.clear();nn=false;dus.clear();dubRefresh();document.querySelectorAll(".chip[data-k]").forEach(b=>b.setAttribute("aria-pressed","false"));$("v").setAttribute("aria-pressed","false");const S=t==="s";document.querySelectorAll("#ty button[data-y]").forEach(b=>b.classList.toggle("on",b.dataset.y===t));
  $("du").value="";$("sdu").value="";$("sdir").value="";$("sact").value="";$("q").value="";$("dice").textContent=S?"🎲 Tire-moi une série":"🎲 Tire-moi un film";
  $("sst").options[0].textContent=S?"Pas terminées":"Pas encore vus";$("sst").options[1].textContent="Vus ou non";$("st").innerHTML=S?'<option value="">Vues ou non</option><option value="vu">Terminées</option><option value="en">En cours</option><option value="nv">Pas terminées</option><option value="pr">Prêtées</option>':'<option value="">Vus ou non</option><option value="vu">Vus</option><option value="nv">Pas encore vus</option><option value="pr">Prêtés</option>';
- $("pick").innerHTML='<div class="e">Règle tes envies, puis tire au sort.<br>Les titres prêtés sont exclus.</div>';lp=null;musicUI(t==="m");bookUI(t==="b");lists();draw();if(view==="t")stats()}
+ $("pick").innerHTML='<div class="e">Règle tes envies, puis tire au sort.<br>Les titres prêtés sont exclus.</div>';lp=null;musicUI(t==="m");bookUI(t==="b");lists();dubRefresh();draw();if(view==="t")stats()}
 $("ty").onclick=e=>{const b=e.target.closest("button[data-y]");if(b&&b.dataset.y!==typ)setType(b.dataset.y)};
 $("tb").onclick=e=>{const b=e.target.closest("button[data-t]");if(b)setView(b.dataset.t)};
 let lp=null;
@@ -156,7 +203,7 @@ function stats(){const C=D.filter(x=>isT(x)&&!x.wl),n=C.length,S=typ==="s";if(!n
  +bars(typ==="b"?"Types":"Supports",cnt(x=>[x.s]))+bars("Décennies",cnt(x=>x.y?[dec(x.y)+"s"]:[]).sort((a,b)=>a[0].localeCompare(b[0])))
  +bars(typ==="m"?"Styles":"Genres",cnt(x=>x.g.split(" / ").filter(Boolean)).slice(0,8))
  +bars((typ==="b"?"Auteurs":typ==="m"?"Artistes":S?"Créateurs":"Réalisateurs")+" les plus présents",cnt(x=>sp(x.r)).filter(z=>z[1]>1).slice(0,6))+(typ==="m"||typ==="b"?"":bars("Acteurs les plus présents",cnt(x=>sp(x.a)).filter(z=>z[1]>1).slice(0,6)))
- +(pr.length?"<h3>En prêt</h3>"+pr.map(x=>`<p class="m">${esc(x.t)} → <b>${esc(x.l.n)}</b> (depuis le ${fd(x.l.d)})</p>`).join(""):"")}
+ +recentHTML(C)+(pr.length?"<h3>En prêt</h3>"+pr.map(x=>`<p class="m">${esc(x.t)} → <b>${esc(x.l.n)}</b> (depuis le ${fd(x.l.d)})</p>`).join(""):"")}
 /* ---------- sauvegarde : rappel + versions de secours ---------- */
 const clean=a=>{const bad=[];a.forEach(f=>{if(f.n!==undefined&&!(typeof f.n==="number"&&f.n>=0&&f.n<=5)){delete f.n;bad.push(f)}});return bad};
 const daysSince=v=>v?(Date.now()-new Date(v))/864e5:999;
@@ -175,11 +222,29 @@ $("snl").onclick=async e=>{const b=e.target.closest("[data-r]");if(!b)return;if(
  try{const x=await sdb("readonly",z=>z.get(+b.dataset.r));if(!x)return;const R=JSON.parse(x.data);if(!Array.isArray(R)||R.some(f=>!f||f.id===undefined))throw new Error("format");
   await snap("avant restauration");clean(R);await idb("readwrite",z=>{z.clear();R.forEach(f=>z.put(f))});D=R;lists();draw();snapUI();$("sgs").textContent="Version restaurée : "+D.length+" lignes."}
  catch(err){$("sgs").textContent="Restauration impossible : ta collection actuelle n'a pas été modifiée."}};
-$("enb").onclick=async()=>{if(!tkey()){$("sgs").textContent="Il faut une clé TMDB (voir plus haut).";return}
- const todo=D.filter(x=>!x.pi&&!x.eq);if(!todo.length){$("sgs").textContent="Tout est déjà à jour.";return}
- let i=0,ok=0;$("enb").disabled=true;
- const w=async()=>{while(i<todo.length){const f=todo[i++];if(await enrich(f))ok++;$("sgs").textContent="Affiches : "+i+" / "+todo.length+"…"}};
- await Promise.all([w(),w(),w()]);$("enb").disabled=false;draw();$("sgs").textContent="Terminé : "+ok+" fiches enrichies sur "+todo.length+"."};
+/* ---------- réglages : récupération des visuels et résumés ---------- */
+const EN={v:{n:"Films et séries",w:3},b:{n:"Livres",w:2},m:{n:"Musique",w:1}};
+const enKind=f=>f.k==="m"?"m":f.k==="b"?"b":"v";
+const enMiss=f=>{const k=enKind(f);return k==="v"?!(f.pi&&f.ov&&hasTxt(f.g)&&hasTxt(f.a)&&hasTxt(f.r)&&hasTxt(f.d)&&hasTxt(f.p)):k==="b"?!(f.pi&&f.ov&&hasTxt(f.r)&&hasTxt(f.y)&&hasTxt(f.d)&&hasTxt(f.p)):!(f.pi&&f.ov&&hasTxt(f.g)&&hasTxt(f.y))};
+let enBusy=false,enStop=false;
+async function runEnrich(kinds){
+ if(enBusy)return;const S=$("enS"),retry=$("enR").checked,jobs=[],notes=[];
+ kinds.forEach(k=>{
+  if(k==="v"&&!tkey()){notes.push("Films et séries : il faut une clé TMDB (voir « Recherche de film »).");return}
+  const todo=D.filter(f=>enKind(f)===k&&enMiss(f)&&(retry||!f.eq));
+  if(todo.length)jobs.push({k,todo,i:0,done:0,ok:0,miss:0,err:0,run:0,stop:0,why:""});
+  else notes.push(EN[k].n+" : rien à compléter"+(retry?"":" (ou déjà essayé : coche « Réessayer »)")+".")});
+ if(!jobs.length){S.textContent=notes.join(" ");return}
+ enBusy=true;enStop=false;const ids=["enb","enF","enB","enM"];ids.forEach(i=>$(i).disabled=true);$("enX").hidden=false;
+ const show=()=>{S.textContent=jobs.map(j=>EN[j.k].n+" : "+j.done+" / "+j.todo.length).join(" · ")+"…"};show();
+ const work=async j=>{while(!enStop&&!j.stop&&j.i<j.todo.length){const f=j.todo[j.i++],r=await enrich(f,1);j.done++;
+   if(r===null){j.err++;j.run++;const e=enrich.err;if(e&&e.status===401){j.stop=1;j.why="clé TMDB refusée"}else if(j.run>=4){j.stop=1;j.why=netMsg(e)}}
+   else{j.run=0;r?j.ok++:j.miss++}
+   show();if(j.k==="m")await sleep(1100)}};
+ try{await Promise.all(jobs.map(j=>Promise.all(Array.from({length:EN[j.k].w},()=>work(j)))))}
+ finally{enBusy=false;ids.forEach(i=>$(i).disabled=false);$("enX").hidden=true;lists();draw()}
+ S.textContent=(enStop?"Arrêté. ":"Terminé. ")+jobs.map(j=>EN[j.k].n+" : "+j.ok+" complétée"+(j.ok>1?"s":"")+" sur "+j.done+(j.miss?", "+j.miss+" introuvable"+(j.miss>1?"s":""):"")+(j.err?", "+j.err+" erreur"+(j.err>1?"s":"")+(j.why?" ("+j.why+")":""):"")+(j.stop?" — abandonné pour ne pas insister":"")).concat(notes).join(" · ")}
+$("enb").onclick=()=>runEnrich(["v","b","m"]);$("enF").onclick=()=>runEnrich(["v"]);$("enB").onclick=()=>runEnrich(["b"]);$("enM").onclick=()=>runEnrich(["m"]);$("enX").onclick=()=>{enStop=true;$("enS").textContent="Arrêt en cours…"};
 /* ---------- loupe : ouvre / ferme la barre de recherche ---------- */
 function qOpen(o,focus){$("q").hidden=!o;$("sb2").setAttribute("aria-pressed",o);if(o&&focus)$("q").focus()}
 $("sb2").onclick=()=>{if($("q").hidden)qOpen(true,true);else{$("q").value="";qOpen(false);draw()}};
@@ -193,13 +258,13 @@ function setTheme(t,save){if(!TC[t])t="dark";const R=document.documentElement;if
 $("th").onclick=()=>{const c=document.documentElement.dataset.theme||"dark";setTheme(THEMES[(THEMES.indexOf(c)+1)%2],true)};
 setTheme(document.documentElement.dataset.theme||"dark",false);
 /* ---------- tri / filtres ---------- */
-const lab=()=>($("s").value=="y"||$("s").value=="l"||$("s").value=="n")?(asc?"Croissant":"Décroissant"):(asc?"A → Z":"Z → A");
-$("q").oninput=draw;$("g").onchange=draw;$("s").onchange=()=>{asc=$("s").value!=="n";$("o").textContent=lab();draw()};
+const lab=()=>$("s").value=="da"?(asc?"Anciens d'abord":"Récents d'abord"):($("s").value=="y"||$("s").value=="l"||$("s").value=="n")?(asc?"Croissant":"Décroissant"):(asc?"A → Z":"Z → A");
+$("q").oninput=draw;$("g").onchange=draw;$("s").onchange=()=>{asc=$("s").value!=="n"&&$("s").value!=="da";$("o").textContent=lab();draw()};
 $("o").onclick=()=>{asc=!asc;$("o").textContent=lab();draw()};
 document.querySelectorAll(".chip[data-k]").forEach(b=>b.onclick=()=>{const k=b.dataset.k;sup.has(k)?sup.delete(k):sup.add(k);b.setAttribute("aria-pressed",sup.has(k));draw()});
 $("fb").onclick=()=>{const o=$("pn").hidden;$("pn").hidden=!o;$("fb").setAttribute("aria-expanded",o)};
 ["du","dc","nm","st"].forEach(i=>$(i).onchange=draw);$("su").onchange=()=>{sup.clear();if($("su").value)sup.add($("su").value);draw()};["fr","fa","fpr"].forEach(i=>$(i).oninput=draw);
-$("rz").onclick=()=>{["du","dc","nm","fr","fa","fpr","q","g","su","st"].forEach(i=>$(i).value="");sup.clear();nn=false;document.querySelectorAll(".chip[data-k]").forEach(b=>b.setAttribute("aria-pressed","false"));$("v").setAttribute("aria-pressed","false");draw()};
+$("rz").onclick=()=>{["du","dc","nm","fr","fa","fpr","q","g","su","st"].forEach(i=>$(i).value="");sup.clear();nn=false;dus.clear();dubRefresh();document.querySelectorAll(".chip[data-k]").forEach(b=>b.setAttribute("aria-pressed","false"));$("v").setAttribute("aria-pressed","false");draw()};
 $("v").onclick=()=>{nn=!nn;$("v").setAttribute("aria-pressed",nn);draw()};
 /* ---------- retrait + annulation ---------- */
 let pend=null,undo=null,utm;
@@ -217,7 +282,8 @@ function editItem(f){editingId=f.id;cur={pi:f.pi||"",ov:f.ov||"",seasonEpisodes:
 function fill(c){cur={pi:c.affiche||"",ov:c.synopsis||"",seasonEpisodes:c.seasonEpisodes||null,isbn:c.isbn||""};$("fO").value=c.synopsis||"";$("fT").value=c.titre||"";$("fR").value=c.realisateur||"";$("fY").value=c.annee||"";$("fD").value=c.duree||"";$("fG").value=c.genre||"";$("fA").value=c.acteurs||"";$("fP").value=c.production||"";$("fNs").value=c.saisons||"";$("fNe").value=c.episodes||"";if(SUP.includes(c.support))$("fS").value=c.support;if(typ==="s")seasonEditor({seasonEpisodes:c.seasonEpisodes});
  if(typ==="m"&&!c.synopsis&&(c.affiche||"").startsWith("mb:")){const pi=c.affiche;$("synS").textContent="Récupération des titres…";mbTracks(pi.slice(3)).then(t=>{if(cur.pi!==pi)return;if(t&&!$("fO").value.trim()){$("fO").value=t;cur.ov=t;$("synS").textContent="Titres récupérés sur MusicBrainz."}else $("synS").textContent=""}).catch(()=>{if(cur.pi===pi)$("synS").textContent=""})}
  if(typ==="b"&&!c.synopsis&&c.titre){const me=cur;$("synS").textContent="Recherche du résumé…";bookSyn(c.titre,c.realisateur||"",isbnNorm(c.isbn||"")).then(r=>{if(cur!==me)return;if(r.length&&!$("fO").value.trim()){$("fO").value=r[0].synopsis;cur.ov=r[0].synopsis;$("synS").textContent="Résumé récupéré ("+r[0].src+") : relis-le avant d'enregistrer."}else $("synS").textContent=r.length?"":"Pas de résumé trouvé : colle-le à la main."}).catch(()=>{if(cur===me)$("synS").textContent=""})}}
-function seasonEditor(f){const seasons=f.seasonEpisodes||cur.seasonEpisodes||[];if(!seasons.length){$("seasonPick").innerHTML="";return}
+function seasonEditor(f){ownN=(f&&f.id&&f.ownedSeasons!==undefined&&!Array.isArray(f.seasonsOwned))?f.ownedSeasons:null;seasonEditor0(f);ownUI()}
+function seasonEditor0(f){const seasons=f.seasonEpisodes||cur.seasonEpisodes||[];if(!seasons.length){$("seasonPick").innerHTML="";return}
  $("seasonPick").innerHTML='<div class="w2"><b>Saisons possédées</b><div class="hint">Coche uniquement les saisons que tu as.</div></div>'+seasons.map(z=>`<label class="season-choice"><input type="checkbox" value="${z.season}" ${(f.id?!Array.isArray(f.seasonsOwned)||f.seasonsOwned.includes(z.season):Array.isArray(f.seasonsOwned)&&f.seasonsOwned.includes(z.season))?"checked":""}> Saison ${z.season} · ${z.episodes} épisode${z.episodes>1?"s":""}</label>`).join("")}
 function show(a,src){a=dedupC(a||[]);$("sc").innerHTML="";if(!a.length){msg("Rien trouvé : ouvre « Saisie et retouches manuelles » pour créer la fiche, ou relance une recherche par titre.");$("manual").hidden=false;$("manual").open=true;return}
  const note="Fiche proposée par "+src+" : relis-la avant d'ajouter.";
@@ -303,8 +369,8 @@ function musicUI(M){SUP=M?SUPM:SUPF;sup.clear();setOptA(!M);const o=a=>a.map(v=>
  $("s").querySelector("option[value=r]").textContent=M?"Artiste":"Réalisateur";
  $("fr").placeholder=M?"Artiste":"Réalisateur";$("fpr").placeholder=M?"Label":"Maison de production";$("fP").placeholder=$("fpr").placeholder;
  $("fa").hidden=M;$("fA").hidden=M;$("fO").placeholder=M?"Liste des titres, un par ligne (## Disque 2 pour séparer les disques)":"Synopsis";$("syn").textContent=M?"↻ Récupérer les titres":"↻ Récupérer le synopsis";$("synA").style.display=M?"none":"";
- ["sdir","sact"].forEach(i=>{const e=$(i);if(!e)return;const w=e.closest(".clear-wrap")||e;w.style.display=M?"none":"";if(M)e.value=""});$("bcr").hidden=false;$("fG").placeholder=M?"Style (ex. Rock / Rap / Électro)":"Genre (ex. Comédie / Action)";$("s").querySelector("option[value=g]").textContent=M?"Style":"Genre";$("q").placeholder=M?"Album, artiste ou label":"Titre, réalisateur, acteur ou production";
- $("cam").textContent=M?"📷 Photographier la pochette":"📷 Photographier la jaquette";$("sq").placeholder=M?"Ou cherche par titre ou artiste":"Ou cherche par titre";
+ ["sdir","sact"].forEach(i=>{const e=$(i);if(!e)return;const w=e.closest(".clear-wrap,.dd")||e;w.style.display=M?"none":"";if(M)e.value=""});$("bcr").hidden=false;$("fG").placeholder=M?"Style (ex. Rock / Rap / Électro)":"Genre (ex. Comédie / Action)";$("s").querySelector("option[value=g]").textContent=M?"Style":"Genre";$("q").placeholder=M?"Album, artiste ou label":"Titre, réalisateur, acteur ou production";
+ $("cam").textContent=M?"📷 Photo pochette":"📷 Photo jaquette";$("sq").placeholder=M?"Cherche par titre ou artiste":"Cherche par titre";
  if(M){$("dice").textContent="🎲 Tire-moi un album";$("sst").options[0].textContent="Pas encore écoutés";$("sst").options[1].textContent="Écoutés ou non";
   $("st").innerHTML='<option value="">Écoutés ou non</option><option value="vu">Écoutés</option><option value="nv">Pas encore écoutés</option><option value="pr">Prêtés</option>'}}
 
@@ -409,7 +475,7 @@ function bookUI(B){const o=a=>a.map(v=>"<option>"+v+"</option>").join(""),ov=a=>
   $("fr").placeholder="Auteur";$("fpr").placeholder="Éditeur";$("fP").placeholder="Éditeur";$("fa").hidden=true;$("fA").hidden=true;
   $("fO").placeholder="Résumé";$("syn").textContent="↻ Récupérer le résumé";$("synA").style.display="none";
   $("fG").placeholder="Genre (ex. Polar / SF / Fantasy)";$("q").placeholder="Titre, auteur ou éditeur";
-  $("cam").textContent="📷 Photographier la couverture";$("sq").placeholder="Titre, auteur ou ISBN";$("bcr").hidden=false;
+  $("cam").textContent="📷 Photo couverture";$("sq").placeholder="Titre, auteur ou ISBN";$("bcr").hidden=false;
   $("dice").textContent="🎲 Tire-moi un livre";$("sst").options[0].textContent="Pas encore lus";$("sst").options[1].textContent="Lus ou non";
   $("st").innerHTML='<option value="">Lus ou non</option><option value="vu">Lus</option><option value="nv">Pas encore lus</option><option value="pr">Prêtés</option>';
   $("du").innerHTML='<option value="">Toutes les longueurs</option>'+ov([...TRB,"Non renseignée"]);
@@ -503,7 +569,7 @@ async function find(q,y,au){const my=++fseq,ms2=t=>{if(my===fseq)msg(t)},sh2=(a,
 /* Scan photo : Gemini ne renvoie que le titre (1 petit appel), la fiche vient de TMDB/Wikidata */
 async function scan(blob){const k=localStorage.getItem(KEY);if(!k){await ocrScan(blob);return}
  msg("Lecture de la jaquette…");$("sc").innerHTML="";
- try{const mod=localStorage.getItem(MOD)||DEF_MOD,txt=typ==="b"?"Voici la photo d'une couverture de livre ou de BD. Lis le titre (sans le nom de l'auteur ni la collection) et le nom de l'auteur (prénom et nom). Réponds uniquement en JSON : {\"titre\":\"titre du livre\",\"artiste\":\"auteur\",\"annee\":0,\"support\":\"Roman, BD, Manga, Comics, Jeunesse ou Essai si évident, sinon vide\"}":typ==="m"?"Voici la photo d'une pochette d'album (vinyle, CD ou K7). Lis le titre de l'album (sans le nom de l'artiste) et le nom de l'artiste. Réponds uniquement en JSON : {\"titre\":\"titre de l'album\",\"artiste\":\"artiste\",\"annee\":année si visible sinon 0,\"support\":\"Vinyle, CD ou K7 si visible, sinon vide\"}":"Voici la photo d'une jaquette de DVD ou Blu-ray. Lis le titre du film ou de la série. Réponds uniquement en JSON : {\"titre\":\"titre lu sur la jaquette\",\"annee\":année si visible sinon 0,\"support\":\"DVD ou Blu-ray si visible, sinon vide\"}";
+ try{const mod=localStorage.getItem(MOD)||DEF_MOD,txt=typ==="b"?"Voici la photo d'une couverture de livre ou de BD. Lis le titre, en général le texte le plus grand (sans le nom de l'auteur, la collection, les bandeaux ni les citations) et le nom de l'auteur (prénom et nom). Réponds uniquement en JSON : {\"titre\":\"titre du livre\",\"artiste\":\"auteur\",\"annee\":0,\"support\":\"Roman, BD, Manga, Comics, Jeunesse ou Essai si évident, sinon vide\"}":typ==="m"?"Voici la photo d'une pochette d'album (vinyle, CD ou K7). Lis le titre de l'album, en général le texte le plus grand (sans le nom de l'artiste ni les mentions techniques) et le nom de l'artiste. Réponds uniquement en JSON : {\"titre\":\"titre de l'album\",\"artiste\":\"artiste\",\"annee\":année si visible sinon 0,\"support\":\"Vinyle, CD ou K7 si visible, sinon vide\"}":"Voici la photo d'une jaquette de DVD ou Blu-ray. Le titre est en général le texte le plus grand ou le plus visible : ignore les noms d'acteurs et de réalisateur, les slogans, critiques, récompenses, logos de studios et mentions techniques. Si le texte est ambigu, aide-toi aussi du visuel de l'affiche pour reconnaître le film ou la série, et donne son titre officiel en français. Réponds uniquement en JSON : {\"titre\":\"titre lu sur la jaquette\",\"annee\":année si visible sinon 0,\"support\":\"DVD ou Blu-ray si visible, sinon vide\"}";
   const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(mod)+":generateContent?key="+encodeURIComponent(k),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:[{inline_data:{mime_type:"image/jpeg",data:await b64(blob)}},{text:txt+CODEQ}]}],generationConfig:{responseMimeType:"application/json",temperature:0,maxOutputTokens:1024}}),signal:AbortSignal.timeout?AbortSignal.timeout(45000):undefined});
   if(!r.ok){let d="";try{const e=await r.json();d=(e.error&&e.error.message)||""}catch(_){}
    msg((r.status===429?"Quota Google épuisé":"Erreur Google ("+r.status+")")+" : lecture locale de la photo à la place…");await ocrScan(blob);return}
@@ -529,10 +595,10 @@ async function readBarcodeImg(file){try{const base=await bitmapOf(file,2000);
 const loadTess=()=>window.Tesseract?Promise.resolve():new Promise((a,b)=>{const e=document.createElement("script");e.src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";e.onload=a;e.onerror=b;document.head.append(e)});
 function ocrLines(d){const bad=/^(blu[ -]?ray|dvd|4k|uhd|hd|ultra hd|disc|disque|collector|edition|édition|version|steelbook|import|vf|vostfr|stereo|dolby|dts|cd|lp|vinyl|vinyle|nouveau|new)$/i,
  cl=v=>String(v||"").replace(/[^\p{L}\p{N}'’:!&.,\- ]/gu," ").replace(/\s+/g," ").trim(),
- ok=v=>{const n=(v.match(/\p{L}/gu)||[]).length;return v.length>=3&&n>=3&&n/v.length>=.6&&!bad.test(v)};
+ ok=v=>{const n=(v.match(/\p{L}/gu)||[]).length;return v.length>=3&&n>=3&&n/v.length>=.6&&!bad.test(v)&&!/^(un film de|a film by|avec|starring|réalisé|d'après|présenté)\b|oscars?|césars?|festival|©|www\.|https?:/i.test(v)};
  let ls=(d.lines||[]).map(l=>({s:cl(l.text),h:l.bbox?l.bbox.y1-l.bbox.y0:0,y:l.bbox?l.bbox.y0:0,c:l.confidence||0})).filter(l=>ok(l.s)&&l.c>=35);
  if(!ls.length)ls=String(d.text||"").split(/\r?\n/).map(v=>({s:cl(v),h:0,y:0,c:50})).filter(l=>ok(l.s));
- ls.sort((a,b)=>(b.h*b.c||b.s.length)-(a.h*a.c||a.s.length));
+ ls.sort((a,b)=>(b.h*b.h*b.c||b.s.length)-(a.h*a.h*a.c||a.s.length));
  const out=[],a=ls[0];if(a&&a.h){const b=ls.slice(1).find(z=>Math.abs(z.h-a.h)<=a.h*.3&&Math.abs(z.y-a.y)<=a.h*2.2);if(b)out.push(a.y<=b.y?a.s+" "+b.s:b.s+" "+a.s)}
  ls.forEach(l=>out.push(l.s));return[...new Set(out)].slice(0,5)}
 async function ocrScan(blob){msg("Lecture locale de la photo (gratuite, sans compte)… la 1ʳᵉ fois, quelques Mo à télécharger.");$("sc").innerHTML="";$("ocrl").innerHTML="";
@@ -547,7 +613,7 @@ const b64=b=>new Promise((a,r)=>{const f=new FileReader();f.onload=()=>a(String(
 async function shrink(file){const u=URL.createObjectURL(file);const im=new Image();await new Promise((a,b)=>{im.onload=a;im.onerror=b;im.src=u});
  const k=Math.min(1,1280/Math.max(im.width,im.height));const c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
  c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);return new Promise(r=>c.toBlob(r,"image/jpeg",.82))}
-$("add").onclick=()=>{if(view==="s"||view==="t")setView("c");editingId=null;cur={};$("fO").value="";$("synS").textContent="";$("ad").querySelector("h2").textContent=view==="w"?"Ajouter un souhait":"Ajouter un film";$("fok").textContent=view==="w"?"Ajouter à mes souhaits":"Ajouter à ma collection";$("manual").open=false;$("manual").hidden=false;$("cam").hidden=view==="w";$("bcr").hidden=false;$("sq").placeholder=view==="w"?(typ==="b"?"Titre ou auteur":"Titre, réalisateur, artiste ou acteur"):typ==="b"?"Titre, auteur ou ISBN":"Ou cherche par titre";$("ad").querySelector("h2").textContent=view==="w"?"Ajouter un souhait":typ==="m"?"Ajouter un album":typ==="b"?"Ajouter un livre":typ==="s"?"Ajouter une série":"Ajouter un film";$("fR").placeholder=typ==="s"?"Créateur":typ==="m"?"Artiste":typ==="b"?"Auteur":"Réalisateur";$("fD").placeholder=typ==="s"?"Durée d'un épisode (min)":typ==="b"?"Nombre de pages":"Durée (min)";$("fok").textContent=view==="w"?"Ajouter à mes souhaits":"Ajouter à ma collection";$("ad").hidden=false;msg("");$("sc").innerHTML="";$("ocrl").innerHTML="";["fT","fR","fY","fD","fG","fA","fP","fNs","fNe","sq"].forEach(i=>$(i).value="");$("fS").selectedIndex=0};
+$("add").onclick=()=>{if(view==="s"||view==="t")setView("c");editingId=null;cur={};$("fO").value="";$("synS").textContent="";$("ad").querySelector("h2").textContent=view==="w"?"Ajouter un souhait":"Ajouter un film";$("fok").textContent=view==="w"?"Ajouter à mes souhaits":"Ajouter à ma collection";$("manual").open=false;$("manual").hidden=false;$("cam").hidden=view==="w";$("bcr").hidden=false;$("sq").placeholder=view==="w"?(typ==="b"?"Titre ou auteur":"Titre, réalisateur, artiste ou acteur"):typ==="b"?"Titre, auteur ou ISBN":"Cherche par titre";$("ad").querySelector("h2").textContent=view==="w"?"Ajouter un souhait":typ==="m"?"Ajouter un album":typ==="b"?"Ajouter un livre":typ==="s"?"Ajouter une série":"Ajouter un film";$("fR").placeholder=typ==="s"?"Créateur":typ==="m"?"Artiste":typ==="b"?"Auteur":"Réalisateur";$("fD").placeholder=typ==="s"?"Durée d'un épisode (min)":typ==="b"?"Nombre de pages":"Durée (min)";$("fok").textContent=view==="w"?"Ajouter à mes souhaits":"Ajouter à ma collection";$("ad").hidden=false;msg("");$("sc").innerHTML="";$("ocrl").innerHTML="";ownN=null;setTimeout(ownUI,0);["fT","fR","fY","fD","fG","fA","fP","fNs","fNe","sq"].forEach(i=>$(i).value="");$("fS").selectedIndex=0};
 $("ax").onclick=()=>{$("ad").hidden=true;editingId=null;$("fok").textContent="Ajouter à ma collection";$("ad").querySelector("h2").textContent="Ajouter un film"};
 $("cam").onclick=()=>$("ph").click();
 $("ph").onchange=async()=>{const f=$("ph").files[0];$("ph").value="";if(!f)return;
@@ -567,7 +633,7 @@ $("fok").onclick=()=>{if(view==="w"&&!$("manual").open){$("manual").open=true;re
  const dup=editingId?null:D.find(x=>(x.k||"f")===typ&&nk(x.t)===nk(t)&&((typ!=="m"&&typ!=="b")||key(x.r)===key($("fR").value))&&(!x.y||!y||Math.abs(x.y-y)<=1));
  if(dup&&!confirm("« "+dup.t+(dup.y?" ("+dup.y+")":"")+" » est déjà "+(dup.wl?"dans tes souhaits":"dans ta collection")+". L'ajouter quand même ?"))return;
  const old=editingId?D.find(x=>x.id===editingId):null;
- const f={...(old||{}),id,t,r:$("fR").value.trim(),y,d:n($("fD").value),g:$("fG").value.trim(),a:$("fA").value.trim(),s:$("fS").value,p:$("fP").value.trim(),v:old?undefined:1};if(typ==="s"){f.k="s";const a=n($("fNs").value),b=n($("fNe").value);if(a)f.ns=a;if(b)f.ne=b;if(cur.seasonEpisodes){f.seasonEpisodes=cur.seasonEpisodes;f.episodesTotal=cur.seasonEpisodes.reduce((sum,z)=>sum+z.episodes,0);const selected=[...$("seasonPick").querySelectorAll('input[type="checkbox"]:checked')].map(z=>+z.value);f.seasonsOwned=selected;f.ns=cur.seasonEpisodes.length;f.ne=cur.seasonEpisodes.reduce((sum,z)=>sum+(selected.includes(z.season)?z.episodes:0),0);f.ownedSeasons=selected.length;f.ownedEpisodes=f.ne;}}if(typ==="m")f.k="m";if(typ==="b")f.k="b";if(view==="w")f.wl=1;if(cur.pi)f.pi=cur.pi;if(cur.isbn)f.isbn=cur.isbn;{const o=$("fO").value.trim();if(o)f.ov=o;else{delete f.ov;if(old)delete old.ov}}
+ const f={...(old||{}),id,t,r:$("fR").value.trim(),y,d:n($("fD").value),g:$("fG").value.trim(),a:$("fA").value.trim(),s:$("fS").value,p:$("fP").value.trim(),v:old?undefined:1};if(!old)f.da=Date.now();if(typ==="s"){f.k="s";const a=n($("fNs").value),b=n($("fNe").value);if(a)f.ns=a;if(b)f.ne=b;if(cur.seasonEpisodes){f.seasonEpisodes=cur.seasonEpisodes;f.episodesTotal=cur.seasonEpisodes.reduce((sum,z)=>sum+z.episodes,0);const selected=[...$("seasonPick").querySelectorAll('input[type="checkbox"]:checked')].map(z=>+z.value);f.seasonsOwned=selected;f.ns=cur.seasonEpisodes.length;f.ne=cur.seasonEpisodes.reduce((sum,z)=>sum+(selected.includes(z.season)?z.episodes:0),0);f.ownedSeasons=selected.length;f.ownedEpisodes=f.ne;}else{const n2=f.ns||0;if(ownN!==null)f.ownedSeasons=n2?Math.min(ownN,n2):ownN;else if(f.ownedSeasons!==undefined&&n2)f.ownedSeasons=Math.min(f.ownedSeasons,n2)}}if(typ==="m")f.k="m";if(typ==="b")f.k="b";if(view==="w")f.wl=1;if(cur.pi)f.pi=cur.pi;if(cur.isbn)f.isbn=cur.isbn;{const o=$("fO").value.trim();if(o)f.ov=o;else{delete f.ov;if(old)delete old.ov}}
  if(old)Object.assign(old,f);else D.push(f);put(f);editingId=null;lists();$("ad").hidden=true;$("manual").open=false;$("fok").textContent="Ajouter à ma collection";$("ad").querySelector("h2").textContent="Ajouter un film";$("q").value=t;draw();const c=card(id);if(c)c.classList.add("open")};
 /* ---------- réglages, export / import CSV ---------- */
 function openSettings(m){$("sg").hidden=false;snapUI();$("kk").value=localStorage.getItem(KEY)||"";$("km").value=localStorage.getItem(MOD)||"";$("km").placeholder="Modèle (défaut : "+DEF_MOD+")";$("sgs").textContent=m||"";$("km2").textContent=localStorage.getItem(KEY)?"Clé enregistrée sur cet appareil.":"";$("tk").value=localStorage.getItem(TK)||"";$("tk2").textContent=localStorage.getItem(TK)?"Clé TMDB enregistrée sur cet appareil.":"Pas de clé TMDB : la recherche passe par Wikidata.";$("gbk").value=localStorage.getItem(GBK)||"";$("gbk2").textContent=localStorage.getItem(GBK)?"Clé Google Livres enregistrée sur cet appareil.":"Pas de clé : l'appli utilise le quota partagé de Google (parfois saturé).";if(m){$("acG").open=true;$("kk").focus()}}
@@ -597,16 +663,16 @@ $("gbks").onclick=()=>{const k=$("gbk").value.trim();
  try{k?localStorage.setItem(GBK,k):localStorage.removeItem(GBK)}catch(e){$("sgs").textContent="Impossible d'enregistrer sur cet appareil.";return}
  $("sgs").textContent=k?"Clé Google Livres enregistrée.":"Clé Google Livres retirée.";$("gbk2").textContent=k?"Clé Google Livres enregistrée sur cet appareil.":"Pas de clé : l'appli utilise le quota partagé de Google (parfois saturé).";};
 $("sh").onclick=async()=>{const base=/^https?:$/.test(location.protocol)?location.origin+location.pathname.replace(/index\.html$/,""):"https://pierremehouas-beep.github.io/Ma-Mediatheque/",
- full="My Mediatheque : catalogue tes films, séries, albums et livres, gratuit et sans compte. Ouvre ce lien dans Safari, puis Partager → « Sur l'écran d'accueil » :\n"+base;
+ full="My Mediatheque : catalogue tes films, séries, albums et livres, gratuit et sans compte. Ouvre ce lien sur ton smartphone ou ton PC, puis ajoute l'appli à ton écran d'accueil (iPhone : Partager → « Sur l'écran d'accueil » ; Android et PC : menu du navigateur → « Installer l'application ») :\n"+base;
  try{if(navigator.share){await navigator.share({title:"My Mediatheque",text:full});return}}catch(e){if(e&&e.name==="AbortError")return}
  try{await navigator.clipboard.writeText(full);$("sgs").textContent="Lien copié : colle-le dans un message."}catch(e){$("sgs").textContent="Lien à envoyer : "+base}};
-const COLS=["Titre","Réalisateur","Durée (min)","Genre","Année de sortie","Acteurs principaux","Support","Maison de production","Note","Vu le","Prêté à","Prêté le","Commentaire","Liste","Affiche","Synopsis","Type","Saisons","Épisodes","Saisons vues","Saisons possédées","Épisodes possédés","Détail épisodes par saison","Total épisodes","ISBN"];
+const COLS=["Titre","Réalisateur","Durée (min)","Genre","Année de sortie","Acteurs principaux","Support","Maison de production","Note","Vu le","Prêté à","Prêté le","Commentaire","Liste","Affiche","Synopsis","Type","Saisons","Épisodes","Saisons vues","Saisons possédées","Épisodes possédés","Détail épisodes par saison","Total épisodes","ISBN","Nb saisons possédées","Ajouté le"];
 const cell=v=>{v=String(v===undefined||v===null?"":v);return /[;"\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
 async function out(name,text){const blob=new Blob(["\uFEFF"+text],{type:"text/csv;charset=utf-8"});const file=new File([blob],name,{type:"text/csv"});
  try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});return true}}catch(e){if(e&&e.name==="AbortError")return false}
  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);return true}
 $("ex").onclick=async()=>{if(!D.length){$("sgs").textContent="Rien à exporter pour l'instant.";return}
- const rows=[...D].sort((a,b)=>key(a.t).localeCompare(key(b.t),"fr")).map(x=>[x.t,x.r,x.d,x.g,x.y,x.a,x.s,x.p,x.n===undefined?"":String(x.n).replace(".",","),x.vu||"",x.l?x.l.n:"",x.l?x.l.d:"",x.c||"",x.wl?"souhait":"",x.pi||"",x.ov||"",x.k==="s"?"série":x.k==="m"?"musique":x.k==="b"?"livre":"",x.ns||"",x.ne||"",x.sw||"",x.seasonsOwned?x.seasonsOwned.join(","):"",x.ownedEpisodes===undefined?"":x.ownedEpisodes,x.seasonEpisodes?JSON.stringify(x.seasonEpisodes):"",x.episodesTotal||"",x.isbn||""].map(cell).join(";"));
+ const rows=[...D].sort((a,b)=>key(a.t).localeCompare(key(b.t),"fr")).map(x=>[x.t,x.r,x.d,x.g,x.y,x.a,x.s,x.p,x.n===undefined?"":String(x.n).replace(".",","),x.vu||"",x.l?x.l.n:"",x.l?x.l.d:"",x.c||"",x.wl?"souhait":"",x.pi||"",x.ov||"",x.k==="s"?"série":x.k==="m"?"musique":x.k==="b"?"livre":"",x.ns||"",x.ne||"",x.sw||"",x.seasonsOwned?x.seasonsOwned.join(","):"",x.ownedEpisodes===undefined?"":x.ownedEpisodes,x.seasonEpisodes?JSON.stringify(x.seasonEpisodes):"",x.episodesTotal||"",x.isbn||"",x.ownedSeasons===undefined?"":x.ownedSeasons,x.da?new Date(x.da).toISOString():""].map(cell).join(";"));
  const stamp=new Date().toISOString().replace(/[:.]/g,"-").slice(0,19);if(await out("mediatheque.csv",[COLS.map(cell).join(";"),...rows].join("\r\n"))){try{localStorage.setItem("mt_bk",new Date().toISOString());localStorage.setItem("mt_chg","0")}catch(e){}$("sgs").textContent=D.length+" lignes exportées. Si iOS propose « Remplacer », choisis-le.";bkCheck()}};
 function parseCSV(t){t=t.replace(/^\uFEFF/,"");const first=t.split(/\r?\n/)[0],dl=(first.match(/;/g)||[]).length>=(first.match(/,/g)||[]).length?";":",";
  const rows=[];let r=[],c="",q=false;
@@ -623,11 +689,11 @@ $("im").onclick=()=>$("imf").click();
 $("imf").onchange=async()=>{const file=$("imf").files[0];$("imf").value="";if(!file)return;
  try{const rows=parseCSV(await file.text());if(rows.length<2)throw 0;await snap("avant import");
   const H=rows[0].map(hk),ix=p=>H.findIndex(h=>p.some(q=>h===q||h.startsWith(q)));
-  const I={t:ix(["titre"]),r:ix(["realisateur"]),d:ix(["duree"]),g:ix(["genre"]),y:ix(["annee"]),a:ix(["acteurs"]),s:ix(["support"]),p:ix(["maisondeproduction","production"]),n:ix(["note"]),vu:ix(["vule"]),lo:ix(["pretea"]),ld:ix(["pretele"]),c:ix(["commentaire"]),wl:ix(["liste"]),po:ix(["affiche"]),ov:ix(["synopsis"]),k:ix(["type"]),ns:ix(["saisons"]),ne:ix(["episodes"]),sw:ix(["saisonsvues"]),owned:ix(["saisonspossedees"]),oe:ix(["episodespossedes"]),se:ix(["detailepisodesparsaison"]),et:ix(["totalepisodes"]),isbn:ix(["isbn"])};
+  const I={t:ix(["titre"]),r:ix(["realisateur"]),d:ix(["duree"]),g:ix(["genre"]),y:ix(["annee"]),a:ix(["acteurs"]),s:ix(["support"]),p:ix(["maisondeproduction","production"]),n:ix(["note"]),vu:ix(["vule"]),lo:ix(["pretea"]),ld:ix(["pretele"]),c:ix(["commentaire"]),wl:ix(["liste"]),po:ix(["affiche"]),ov:ix(["synopsis"]),k:ix(["type"]),ns:ix(["saisons"]),ne:ix(["episodes"]),sw:ix(["saisonsvues"]),owned:ix(["saisonspossedees"]),oe:ix(["episodespossedes"]),se:ix(["detailepisodesparsaison"]),et:ix(["totalepisodes"]),isbn:ix(["isbn"]),nbo:ix(["nbsaisonspossedees"]),da:ix(["ajoutele"])};
   if(I.t<0)throw 0;
   const g=(r,k)=>I[k]<0?"":(r[I[k]]||"");const byId=new Map(D.map(x=>[x.id,x]));const canonical=x=>[(x.k||"f"),sk(x.t),x.k==="m"||x.k==="b"?key(x.r):"",x.y||""].join("|");const byCanonical=new Map(D.map(x=>[canonical(x),x]));let add=0,upd=0;const batch=[];
   rows.slice(1).forEach(r=>{const t=cl(g(r,"t"));if(!t)return;const y=pi(g(r,"y"));const ks=/s[ée]rie/i.test(g(r,"k")),km=/musique/i.test(g(r,"k")),kb=/livre/i.test(g(r,"k"));let id=mkid(km||kb?t+" · "+cl(g(r,"r")):t,y)+(ks?"|s":km?"|m":kb?"|b":"");
-   const f={id,t,r:cl(g(r,"r")),d:pi(g(r,"d")),g:cl(g(r,"g")),y,a:cl(g(r,"a")),s:supOf(g(r,"s")),p:cl(g(r,"p"))};{const vu=cl(g(r,"vu")),lo=cl(g(r,"lo")),ld=cl(g(r,"ld")),cm=g(r,"c").trim(),po=cl(g(r,"po")),ov=g(r,"ov").trim();if(vu)f.vu=vu;if(lo)f.l={n:lo,d:ld||today()};if(cm)f.c=cm;if(/souhait/i.test(g(r,"wl")))f.wl=1;if(po)f.pi=po;{const ib=cl(g(r,"isbn"));if(ib)f.isbn=ib}if(ov)f.ov=ov;if(ks){f.k="s";const a=pi(g(r,"ns")),b=pi(g(r,"ne")),c=pi(g(r,"sw"));if(a)f.ns=a;if(b)f.ne=b;if(c)f.sw=c;const owned=cl(g(r,"owned")),oe=pi(g(r,"oe")),se=cl(g(r,"se"));if(owned)f.seasonsOwned=owned.split(",").map(Number).filter(Number.isFinite);if(oe)f.ownedEpisodes=oe;if(se){try{f.seasonEpisodes=JSON.parse(se)}catch(e){}}const et=pi(g(r,"et"));if(et)f.episodesTotal=et;}if(km)f.k="m";if(kb)f.k="b"}
+   const f={id,t,r:cl(g(r,"r")),d:pi(g(r,"d")),g:cl(g(r,"g")),y,a:cl(g(r,"a")),s:supOf(g(r,"s")),p:cl(g(r,"p"))};{const vu=cl(g(r,"vu")),lo=cl(g(r,"lo")),ld=cl(g(r,"ld")),cm=g(r,"c").trim(),po=cl(g(r,"po")),ov=g(r,"ov").trim();if(vu)f.vu=vu;if(lo)f.l={n:lo,d:ld||today()};if(cm)f.c=cm;if(/souhait/i.test(g(r,"wl")))f.wl=1;if(po)f.pi=po;{const ib=cl(g(r,"isbn"));if(ib)f.isbn=ib}if(ov)f.ov=ov;{const dd=Date.parse(cl(g(r,"da")));if(dd)f.da=dd}if(ks){f.k="s";const a=pi(g(r,"ns")),b=pi(g(r,"ne")),c=pi(g(r,"sw"));if(a)f.ns=a;if(b)f.ne=b;if(c)f.sw=c;const owned=cl(g(r,"owned")),oe=pi(g(r,"oe")),se=cl(g(r,"se"));if(owned)f.seasonsOwned=owned.split(",").map(Number).filter(Number.isFinite);{const nb=g(r,"nbo").trim();if(nb!==""&&!f.seasonsOwned&&/^\d+$/.test(nb))f.ownedSeasons=+nb}if(oe)f.ownedEpisodes=oe;if(se){try{f.seasonEpisodes=JSON.parse(se)}catch(e){}}const et=pi(g(r,"et"));if(et)f.episodesTotal=et;}if(km)f.k="m";if(kb)f.k="b"}
    const n=pn(g(r,"n")),old=byId.get(id)||byCanonical.get(canonical(f));if(old)f.id=old.id;
    if(old){if(n===undefined&&old.n!==undefined)f.n=old.n;if(old.v)f.v=old.v;const imported=Object.fromEntries(Object.entries(f).filter(([k,v])=>k==="id"||(v!==""&&v!==undefined&&v!==null)));Object.assign(old,imported);if(n!==undefined)old.n=n;batch.push(old);upd++}
    else{if(n!==undefined)f.n=n;D.push(f);byId.set(f.id,f);byCanonical.set(canonical(f),f);batch.push(f);add++}});
@@ -652,3 +718,18 @@ window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();ipr=e;const
 window.addEventListener("appinstalled",()=>{ipr=null;const b=$("instr");if(b)b.hidden=true});
 {const b=$("inst");if(b)b.onclick=async()=>{if(!ipr)return;try{ipr.prompt();await ipr.userChoice}catch(e){}ipr=null;$("instr").hidden=true}}
 if("serviceWorker"in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+
+/* ---------- derniers ajouts (stats) ---------- */
+function recentHTML(C){const a=C.filter(x=>x.da).sort((p,q)=>q.da-p.da);if(!a.length)return"";const m=a.filter(x=>Date.now()-x.da<2592e6).length;return"<h3>Derniers ajouts</h3><p class=\"m\">"+m+" ajouté"+(m>1?"s":"")+" ces 30 derniers jours</p>"+a.slice(0,5).map(x=>`<p class="m">${esc(x.t)} · <b>${new Date(x.da).toLocaleDateString("fr-FR")}</b></p>`).join("")}
+/* ---------- saisons possédées : compteur + / − quand on n'a pas le détail des saisons ---------- */
+function ownUI(){const w=$("ownS");if(!w)return;const has=cur&&cur.seasonEpisodes&&cur.seasonEpisodes.length,ns=parseInt($("fNs").value,10)||0,show=typ==="s"&&!has&&ns>0;w.hidden=!show;if(!show)return;if(ownN!==null)ownN=Math.min(ownN,ns);$("osv").textContent=(ownN===null?ns:ownN)+" / "+ns}
+{const step=d=>()=>{const ns=parseInt($("fNs").value,10)||0;ownN=Math.max(0,Math.min(ns,(ownN===null?ns:ownN)+d));ownUI()};$("osm").onclick=step(-1);$("osp").onclick=step(1);$("fNs").addEventListener("input",ownUI)}
+/* ---------- durée : cocher plusieurs tranches à la fois ---------- */
+function dubRefresh(){const b=$("dub"),sel=$("du");if(!b)return;const v=[...sel.options].slice(1).map(o=>o.value);[...dus].forEach(x=>{if(!v.includes(x))dus.delete(x)});b.textContent=(dus.size?(dus.size===1?[...dus][0]:dus.size+" durées"):sel.options[0].text)+" ▾";b.classList.toggle("on",dus.size>0);const l=$("dul");if(l&&!l.hidden)dubList()}
+function dubList(){const l=$("dul");l.innerHTML="";[...$("du").options].slice(1).forEach(o=>{const lb=document.createElement("label"),c=document.createElement("input");lb.className="ddi";c.type="checkbox";c.checked=dus.has(o.value);c.onchange=()=>{c.checked?dus.add(o.value):dus.delete(o.value);dubRefresh();draw()};lb.append(c,document.createTextNode(" "+o.text));l.append(lb)});const z=document.createElement("button");z.type="button";z.className="z0";z.textContent="Tout décocher";z.onclick=()=>{dus.clear();dubRefresh();draw()};l.append(z)}
+$("dub").onclick=()=>{const l=$("dul");if(l.hidden){document.querySelectorAll(".ddl").forEach(p=>p.hidden=true);dubList();l.hidden=false}else l.hidden=true};
+/* ---------- flèche de liste déroulante sur téléphone (réalisateur, acteur, production) ---------- */
+["fr","fa","fpr"].forEach(id=>{const inp=$(id),dl=$(inp.getAttribute("list"));if(!dl)return;const w=document.createElement("span"),b=document.createElement("button"),pop=document.createElement("div");w.className="dd";b.type="button";b.className="ddb";b.textContent="▾";b.setAttribute("aria-label","Voir toute la liste");pop.className="ddl";pop.hidden=true;inp.parentNode.insertBefore(w,inp);w.append(inp,b,pop);
+ b.onclick=()=>{if(!pop.hidden){pop.hidden=true;return}document.querySelectorAll(".ddl").forEach(p=>p.hidden=true);pop.innerHTML="";[...dl.options].forEach(o=>{const v=document.createElement("button");v.type="button";v.textContent=o.value;v.onclick=()=>{inp.value=o.value;pop.hidden=true;draw()};pop.append(v)});if(!dl.options.length)pop.innerHTML='<div class="hint" style="padding:8px">Rien à proposer pour l\'instant.</div>';pop.hidden=false}});
+document.addEventListener("click",e=>{document.querySelectorAll(".dd").forEach(w=>{const p=w.querySelector(".ddl");if(p&&!w.contains(e.target))p.hidden=true})});
+dubRefresh();

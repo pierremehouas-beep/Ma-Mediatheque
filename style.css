@@ -183,3 +183,23 @@ body[data-g="1"][data-gc="4"] #l,body[data-g="1"][data-gc="5"] #l{gap:5px}
 .acc .accb{padding:2px 4px 8px}
 #ocrl .hint{margin:10px 0 2px}
 #camh{font-size:13px;margin:6px 0 0}
+
+/* v12 : recherche, durée multiple, flèches de listes, compteur de saisons */
+#duo{flex-wrap:nowrap}#duo button{min-width:0}#bcr{flex:1;display:flex}#bcr[hidden]{display:none}#bcr button{flex:1;min-width:0}
+.dd{position:relative;display:block;min-width:0}
+.dd>input{padding-right:36px!important}
+.ddb{position:absolute;right:2px;top:2px;bottom:2px;width:34px;min-height:0;padding:0;border:0;background:transparent;color:var(--mut)}
+@media (pointer:fine){.ddb{display:none}.dd>input{padding-right:10px!important}}
+.dubtn{width:100%;text-align:left}.dubtn.on{border-color:var(--gold)}
+.ddl{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:30;max-height:45vh;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+.ddl[hidden]{display:none}
+.ddl button{display:block;width:100%;text-align:left;border:0;background:transparent;min-height:38px;border-radius:8px}
+.ddi{display:flex;align-items:center;gap:8px;padding:9px 8px}
+.ddi input{width:20px;height:20px;min-height:0;padding:0;flex:none}
+#ownS{display:flex;align-items:center;gap:8px;margin:10px 0 2px}#ownS[hidden]{display:none}#ownS span{flex:1}#ownS b{min-width:54px;text-align:center}
+#pn .ddi input{width:20px;height:20px;min-height:0;padding:0;flex:none}
+.ddi{color:var(--ink)}
+/* flèches de listes : pas de flèche orpheline quand le champ est masqué, et la croix ne chevauche pas la flèche */
+.dd:has(>input[hidden]){display:none}
+.clear-wrap:has(>.dd>input[hidden]){display:none}
+@media (pointer:coarse){.clear-wrap:has(>.dd) .clear-search{right:40px}.clear-wrap:has(>.dd) .dd{flex:1;min-width:0}}
