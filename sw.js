@@ -1,5 +1,5 @@
 /* My Mediatheque — cache limité à cette application */
-const CACHE = "my-mediatheque-v13";  // à incrémenter à chaque déploiement : les anciennes versions sont supprimées à l'activation
+const CACHE = "my-mediatheque-v14";  // à incrémenter à chaque déploiement : les anciennes versions sont supprimées à l'activation
 // app.js et sync.js sont installés ensemble : jamais deux versions différentes mélangées hors ligne.
 const APP_SHELL = ["./", "./index.html", "./style.css", "./app.js", "./sync.js"];
 const OPTIONAL = ["./manifest.json", "./icon-192.png", "./icon-512.png"];

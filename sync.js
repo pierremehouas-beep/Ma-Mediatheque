@@ -25,6 +25,14 @@ function h53(s) { let a = 0xdeadbeef, b = 0x41c6ce57; for (let i = 0; i < s.leng
 const hash = o => h53(canon(o));
 const did = id => "i" + btoa(String.fromCharCode(...new TextEncoder().encode(id))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 
+/* fiche reçue du cloud = donnée non fiable : on garde la forme attendue, sans jamais supprimer de champ inconnu (compatibilité) */
+function sane(rec) {
+  for (const k of ["t", "r", "g", "a", "p", "s", "pi", "ov", "c", "vu", "isbn"]) if (k in rec && typeof rec[k] !== "string") rec[k] = typeof rec[k] === "number" && isFinite(rec[k]) ? String(rec[k]) : "";
+  if ("k" in rec && !["f", "s", "m", "b"].includes(rec.k)) delete rec.k;
+  if ("n" in rec && !(typeof rec.n === "number" && rec.n >= 0 && rec.n <= 5)) delete rec.n;
+  if ("l" in rec) { const l = rec.l; if (!l || typeof l !== "object" || Array.isArray(l) || typeof l.n !== "string" || !l.n) delete rec.l; else rec.l = { n: l.n, d: typeof l.d === "string" ? l.d : "" } }
+  return rec }
+
 /* ---------- réseau : connexion + Firestore ---------- */
 async function post(url, body, headers, form) {
   const ac = typeof AbortController !== "undefined" ? new AbortController() : null, tmo = ac ? setTimeout(() => ac.abort(), 25000) : 0;
@@ -65,7 +73,7 @@ async function pull(uid, last) {
 /* ---------- synchronisation ---------- */
 const readAll = async () => (await idb("readonly", s => s.getAll())) || [];
 const saveMeta = m => ls.set("mt_sync_meta", JSON.stringify(m));
-let stat = { up: 0, down: 0, bad: 0 };
+let stat = { up: 0, down: 0, bad: 0, big: 0 };
 /* écrit les fiches distantes dans la base locale, dans UNE transaction, et seulement si la fiche locale n'a pas changé depuis la lecture */
 async function applyRemote(puts, dels) {
   const skipped = new Set();
@@ -99,7 +107,7 @@ async function core() {
       else meta[r.i] = ["x", r.u]
     } else {
       let rec; try { rec = JSON.parse(r.j); if (!rec || typeof rec !== "object" || Array.isArray(rec) || typeof rec.t !== "string" || !rec.t) throw 0 } catch (e) { bad++; continue }
-      if (typeof rec.g !== "string") rec.g = "";
+      sane(rec); if (typeof rec.g !== "string") rec.g = "";
       rec.id = r.i; const rh = hash(rec);
       if (l && chg) meta[r.i] = ["?", r.u];                               /* modifiée des deux côtés : la locale gagne */
       else if (!l || lh !== rh) puts.push({ rec, lh, rh, u: r.u });
@@ -117,6 +125,7 @@ async function core() {
   if (!wipe && dels.length > Math.max(10, 0.2 * Object.keys(meta).length) && !confirm("Tu as supprimé " + dels.length + " fiches sur cet appareil. Les supprimer aussi sur tes autres appareils ?\n\nAnnuler = on les récupère depuis le cloud.")) {
     dels.forEach(id => { delete meta[id] }); dels.length = 0; saveMeta(meta); ls.set("mt_sync_pull", "0"); setTimeout(run, 500) }
   const ops = [...ups.map(([id, h, f]) => ({ id, h, d: false, j: JSON.stringify(f) })), ...dels.map(id => ({ id, h: "x", d: true, j: "{}" }))];
+  let big = 0; for (let i = ops.length - 1; i >= 0; i--) if (!ops[i].d && ops[i].j.length > 950000) { ops.splice(i, 1); big++ }   /* limite Firestore : 1 Mo par document */
   const chunks = []; let cc = [], sz = 0;                                 /* lots de 200 fiches max, et 1,5 Mo max (images perso) */
   for (const o of ops) { const w = o.j.length + 300; if (cc.length && (cc.length >= 200 || sz + w > 1.5e6)) { chunks.push(cc); cc = []; sz = 0 } cc.push(o); sz += w }
   if (cc.length) chunks.push(cc);
@@ -126,7 +135,7 @@ async function core() {
       fields: { i: { stringValue: o.id }, u: { integerValue: String(o.u) }, d: { booleanValue: o.d }, j: { stringValue: o.j } } } })) });
     ch.forEach(o => { meta[o.id] = [o.h, o.u] }); saveMeta(meta) }
   if (wipe) ls.del("mt_sync_wipe");
-  stat = { up: ops.length, down: puts.length + dels0.length, bad } }
+  stat = { up: ops.length, down: puts.length + dels0.length, bad, big } }
 
 /* ---------- déclencheurs et affichage ---------- */
 const FR = { EMAIL_EXISTS: "Ce compte existe déjà : utilise « Se connecter ».", INVALID_LOGIN_CREDENTIALS: "Email ou mot de passe incorrect.", INVALID_PASSWORD: "Mot de passe incorrect.",
@@ -142,7 +151,7 @@ async function run(manual) {
   if (busy) { again = true; return }
   if (navigator.onLine === false) { say("Hors ligne : la synchro reprendra toute seule."); return }
   busy = true; say("Synchronisation…");
-  try { await core(); const t = new Date(); say("Synchronisé à " + t.getHours() + "h" + String(t.getMinutes()).padStart(2, "0") + " (" + stat.up + " envoyée" + (stat.up > 1 ? "s" : "") + ", " + stat.down + " reçue" + (stat.down > 1 ? "s" : "") + ")" + (stat.bad ? " — " + stat.bad + " fiche(s) distante(s) illisible(s) ignorée(s)" : "")) }
+  try { await core(); const t = new Date(); say("Synchronisé à " + t.getHours() + "h" + String(t.getMinutes()).padStart(2, "0") + " (" + stat.up + " envoyée" + (stat.up > 1 ? "s" : "") + ", " + stat.down + " reçue" + (stat.down > 1 ? "s" : "") + ")" + (stat.bad ? " — " + stat.bad + " fiche(s) distante(s) illisible(s) ignorée(s)" : "") + (stat.big ? " — " + stat.big + " fiche(s) trop volumineuse(s) (image perso ?) non envoyée(s)" : "")) }
   catch (e) { if (e.message === "NOLOGIN") say("Session expirée : reconnecte-toi."); else say("Synchro impossible : " + msg(e)) }
   finally { busy = false; if (again) { again = false; later(1500) } } }
 const later = ms => { clearTimeout(tm); tm = setTimeout(run, ms) };
