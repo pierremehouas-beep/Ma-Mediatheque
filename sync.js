@@ -11,8 +11,11 @@ const ls = {
   del: k => { try { localStorage.removeItem(k) } catch (e) {} }
 };
 const g = i => document.getElementById(i), sleep = ms => new Promise(r => setTimeout(r, ms));
-let idTok = "", idExp = 0, lastU = 0;
-const nextU = () => (lastU = Math.max(Date.now() * 1000, lastU + 1));
+let idTok = "", idExp = 0, lastU = 0, skew = 0;
+/* u = horloge corrigée sur celle du serveur (µs) ; les 3 derniers chiffres identifient l'appareil : deux appareils ne produisent jamais le même u */
+const SLOT = (() => { let v = +ls.get("mt_sync_slot"); if (!(v >= 0 && v < 1000)) { v = Math.floor(Math.random() * 1000); ls.set("mt_sync_slot", String(v)) } return v })();
+const nextU = () => (lastU = Math.max(Math.floor(Date.now() + skew) * 1000 + SLOT, lastU + 1000));
+const OVER = 300e6;  /* recouvrement de 5 min à chaque lecture : rattrape les envois arrivés en retard d'un autre appareil */
 
 /* ---------- empreinte d'une fiche (pour savoir si elle a changé) ---------- */
 const canon = o => JSON.stringify(o, (k, v) => v && typeof v === "object" && !Array.isArray(v) ? Object.keys(v).sort().reduce((a, c) => (a[c] = v[c], a), {}) : v);
@@ -24,21 +27,26 @@ const did = id => "i" + btoa(String.fromCharCode(...new TextEncoder().encode(id)
 
 /* ---------- réseau : connexion + Firestore ---------- */
 async function post(url, body, headers, form) {
-  const r = await fetch(url, { method: "POST", headers: Object.assign({ "Content-Type": form ? "application/x-www-form-urlencoded" : "application/json" }, headers || {}), body: form ? body : JSON.stringify(body) });
-  let j = null; try { j = await r.json() } catch (e) {}
-  if (!r.ok) { const e = new Error((j && j.error && (j.error.message || j.error.status)) || "HTTP " + r.status); e.code = r.status; throw e }
-  return j }
+  const ac = typeof AbortController !== "undefined" ? new AbortController() : null, tmo = ac ? setTimeout(() => ac.abort(), 25000) : 0;
+  try {
+    const r = await fetch(url, { method: "POST", signal: ac ? ac.signal : undefined, headers: Object.assign({ "Content-Type": form ? "application/x-www-form-urlencoded" : "application/json" }, headers || {}), body: form ? body : JSON.stringify(body) });
+    let j = null, ok = true; try { j = await r.json() } catch (e) { ok = false }
+    if (!r.ok) { const e = new Error((j && j.error && (j.error.message || j.error.status)) || "HTTP " + r.status); e.code = r.status; throw e }
+    if (!ok) throw new Error("Réponse du serveur illisible : réessaie dans un moment.");
+    return j;
+  } catch (e) { if (e && e.name === "AbortError") throw new Error("Failed to fetch (délai dépassé)"); throw e }
+  finally { clearTimeout(tmo) } }
 function keep(t, rt, uid, exp) { idTok = t; idExp = Date.now() + (+exp || 3600) * 1000 - 60000; ls.set("mt_sync_rt", rt); ls.set("mt_sync_uid", uid) }
 async function login(mail, pw, create) {
   const j = await post(AUTH + (create ? "signUp" : "signInWithPassword") + "?key=" + KEY, { email: mail, password: pw, returnSecureToken: true });
-  ls.del("mt_sync_meta"); ls.del("mt_sync_pull"); keep(j.idToken, j.refreshToken, j.localId, j.expiresIn); ls.set("mt_sync_mail", mail) }
+  ls.del("mt_sync_meta"); ls.del("mt_sync_pull"); ls.del("mt_sync_wipe"); keep(j.idToken, j.refreshToken, j.localId, j.expiresIn); ls.set("mt_sync_mail", mail) }
 async function token() {
   if (idTok && Date.now() < idExp) return idTok;
   const rt = ls.get("mt_sync_rt"); if (!rt) throw new Error("NOLOGIN");
   try { const j = await post(TOK, "grant_type=refresh_token&refresh_token=" + encodeURIComponent(rt), null, true); keep(j.id_token, j.refresh_token, j.user_id, j.expires_in); return idTok }
   catch (e) { if (e.code === 400) { logout(true); throw new Error("NOLOGIN") } throw e } }
 const fs = async (url, body) => post(url, body, { Authorization: "Bearer " + await token() });
-function logout(keepMail) { ["mt_sync_rt", "mt_sync_uid", "mt_sync_meta", "mt_sync_pull", "mt_sync_snap"].forEach(ls.del); if (!keepMail) ls.del("mt_sync_mail"); idTok = ""; ui() }
+function logout(keepMail) { ["mt_sync_rt", "mt_sync_uid", "mt_sync_meta", "mt_sync_pull", "mt_sync_snap", "mt_sync_wipe"].forEach(ls.del); if (!keepMail) ls.del("mt_sync_mail"); idTok = ""; ui() }
 
 async function pull(uid, last) {
   const out = [];
@@ -46,58 +54,79 @@ async function pull(uid, last) {
     const j = await fs(FS + "/users/" + uid + ":runQuery", { structuredQuery: { from: [{ collectionId: "items" }],
       where: { fieldFilter: { field: { fieldPath: "u" }, op: "GREATER_THAN", value: { integerValue: String(last) } } },
       orderBy: [{ field: { fieldPath: "u" }, direction: "ASCENDING" }], limit: 300 } });
-    const docs = (j || []).filter(x => x.document).map(x => x.document.fields || {});
+    if (!Array.isArray(j)) throw new Error("Réponse du serveur illisible : réessaie dans un moment.");
+    const rt = j.length && j[0].readTime ? Date.parse(j[0].readTime) : NaN; if (isFinite(rt)) skew = rt - Date.now();
+    const docs = j.filter(x => x.document).map(x => x.document.fields || {});
     docs.forEach(f => out.push({ i: f.i && f.i.stringValue, u: +((f.u && f.u.integerValue) || 0), d: !!(f.d && f.d.booleanValue), j: f.j && f.j.stringValue }));
     if (docs.length < 300) return out;
-    last = out[out.length - 1].u } }
+    const nl = out[out.length - 1].u; if (!(nl > last)) throw new Error("Lecture bloquée (horodatage inattendu) : réessaie plus tard.");
+    last = nl } }
 
 /* ---------- synchronisation ---------- */
 const readAll = async () => (await idb("readonly", s => s.getAll())) || [];
 const saveMeta = m => ls.set("mt_sync_meta", JSON.stringify(m));
-let stat = { up: 0, down: 0 };
+let stat = { up: 0, down: 0, bad: 0 };
+/* écrit les fiches distantes dans la base locale, dans UNE transaction, et seulement si la fiche locale n'a pas changé depuis la lecture */
+async function applyRemote(puts, dels) {
+  const skipped = new Set();
+  await idb("readwrite", s => {
+    puts.forEach(p => { const q = s.get(p.rec.id); q.onsuccess = () => { const c = q.result; if ((c ? hash(c) : "x") === p.lh) s.put(p.rec); else skipped.add(p.rec.id) } });
+    dels.forEach(d => { const q = s.get(d.id); q.onsuccess = () => { const c = q.result; if (c) { if (hash(c) === d.lh) s.delete(d.id); else skipped.add(d.id) } } });
+  }, true);
+  return skipped }
 async function core() {
   const uid = ls.get("mt_sync_uid"); if (!uid) throw new Error("NOLOGIN");
   if (!db) throw new Error("Stockage local indisponible");
   let meta = JSON.parse(ls.get("mt_sync_meta") || "null"); const first = !meta; meta = meta || {};
-  const loc = new Map((await readAll()).map(f => [f.id, f]));
-  /* base locale vide alors qu'on avait déjà synchronisé : on repart du cloud, sans rien y supprimer */
-  if (!loc.size && Object.keys(meta).length) { meta = {}; ls.del("mt_sync_pull") }
+  const wipe = ls.get("mt_sync_wipe") === "1";
+  let loc = new Map((await readAll()).map(f => [f.id, f]));
+  /* base locale vide alors qu'on avait déjà synchronisé (sauf « vider la collection » voulu) : on repart du cloud, sans rien y supprimer */
+  if (!loc.size && Object.keys(meta).length && !wipe) { meta = {}; ls.del("mt_sync_pull") }
   if (first && loc.size && !ls.get("mt_sync_snap")) {
     for (let i = 0; i < 30 && D.length !== loc.size; i++) await sleep(200);
-    await snap("avant synchro"); ls.set("mt_sync_snap", "1") }
-  let last = +ls.get("mt_sync_pull") || 0;
-  const rem = await pull(uid, last), toPut = [], toDel = [];
+    if (!(await snap("avant synchro"))) throw new Error("Copie de secours impossible : synchro suspendue pour protéger tes fiches.");
+    ls.set("mt_sync_snap", "1") }
+  let last = +ls.get("mt_sync_pull") || 0, bad = 0;
+  const rem = await pull(uid, Math.max(0, last - OVER)), puts = [], dels0 = [];
   for (const r of rem) {
-    if (!r.i) continue;
+    last = Math.max(last, r.u); lastU = Math.max(lastU, r.u);             /* le curseur avance aussi pour les documents ignorés ; nos prochains envois seront toujours plus récents que tout ce qu'on a vu */
+    if (!r.i) { bad++; continue }
     const m = meta[r.i]; if (m && r.u <= m[1]) continue;
     const l = loc.get(r.i), lh = l ? hash(l) : "x", chg = m ? lh !== m[0] : false;
     if (r.d) {
       if (l && (chg || !m)) meta[r.i] = ["?", r.u];                       /* modifiée ici : la version locale repart dans le cloud */
-      else { if (l) { loc.delete(r.i); toDel.push(r.i) } meta[r.i] = ["x", r.u] }
+      else if (l) dels0.push({ id: r.i, lh, u: r.u });
+      else meta[r.i] = ["x", r.u]
     } else {
-      let rec; try { rec = JSON.parse(r.j) } catch (e) { continue }
+      let rec; try { rec = JSON.parse(r.j); if (!rec || typeof rec !== "object" || Array.isArray(rec) || typeof rec.t !== "string" || !rec.t) throw 0 } catch (e) { bad++; continue }
+      if (typeof rec.g !== "string") rec.g = "";
       rec.id = r.i; const rh = hash(rec);
       if (l && chg) meta[r.i] = ["?", r.u];                               /* modifiée des deux côtés : la locale gagne */
-      else { if (!l || lh !== rh) { toPut.push(rec); loc.set(r.i, rec) } meta[r.i] = [rh, r.u] } }
-    last = Math.max(last, r.u) }
-  if (toPut.length || toDel.length) {
-    let ok = true; quiet = 1;
-    try { if (toPut.length) ok = await putMany(toPut); if (ok && toDel.length) await idb("readwrite", s => { toDel.forEach(i => s.delete(i)) }) } finally { quiet = 0 }
-    if (!ok) throw new Error("Écriture locale impossible");
-    D.length = 0; (await readAll()).forEach(f => D.push(f)); lists(); draw() }
+      else if (!l || lh !== rh) puts.push({ rec, lh, rh, u: r.u });
+      else meta[r.i] = [rh, r.u] } }
+  if (puts.length || dels0.length) {
+    let sk; try { sk = await applyRemote(puts, dels0) } catch (e) { throw new Error("Écriture locale impossible : rien n'a été modifié ici.") }
+    puts.forEach(p => { meta[p.rec.id] = sk.has(p.rec.id) ? ["?", p.u] : [p.rh, p.u] });   /* modifiée pendant la synchro : la locale gagne */
+    dels0.forEach(d => { meta[d.id] = sk.has(d.id) ? ["?", d.u] : ["x", d.u] });
+    const all = await readAll(); D.length = 0; all.forEach(f => D.push(f)); lists(); draw() }
   ls.set("mt_sync_pull", String(last)); saveMeta(meta);
+  loc = new Map((await readAll()).map(f => [f.id, f]));                   /* état local à jour juste avant l'envoi */
   const ups = [], dels = [];
   for (const [id, f] of loc) { const h = hash(f); if (!meta[id] || meta[id][0] !== h) ups.push([id, h, f]) }
   for (const id of Object.keys(meta)) if (meta[id][0] !== "x" && !loc.has(id)) dels.push(id);
-  if (dels.length > Math.max(10, 0.2 * Object.keys(meta).length) && !confirm("Tu as supprimé " + dels.length + " fiches sur cet appareil. Les supprimer aussi sur tes autres appareils ?\n\nAnnuler = on les récupère depuis le cloud.")) {
+  if (!wipe && dels.length > Math.max(10, 0.2 * Object.keys(meta).length) && !confirm("Tu as supprimé " + dels.length + " fiches sur cet appareil. Les supprimer aussi sur tes autres appareils ?\n\nAnnuler = on les récupère depuis le cloud.")) {
     dels.forEach(id => { delete meta[id] }); dels.length = 0; saveMeta(meta); ls.set("mt_sync_pull", "0"); setTimeout(run, 500) }
   const ops = [...ups.map(([id, h, f]) => ({ id, h, d: false, j: JSON.stringify(f) })), ...dels.map(id => ({ id, h: "x", d: true, j: "{}" }))];
-  for (let k = 0; k < ops.length; k += 200) {
-    const ch = ops.slice(k, k + 200); ch.forEach(o => o.u = nextU());
+  const chunks = []; let cc = [], sz = 0;                                 /* lots de 200 fiches max, et 1,5 Mo max (images perso) */
+  for (const o of ops) { const w = o.j.length + 300; if (cc.length && (cc.length >= 200 || sz + w > 1.5e6)) { chunks.push(cc); cc = []; sz = 0 } cc.push(o); sz += w }
+  if (cc.length) chunks.push(cc);
+  for (const ch of chunks) {
+    ch.forEach(o => o.u = nextU());
     await fs("https://firestore.googleapis.com/v1/" + DOCS + ":commit", { writes: ch.map(o => ({ update: { name: DOCS + "/users/" + uid + "/items/" + did(o.id),
       fields: { i: { stringValue: o.id }, u: { integerValue: String(o.u) }, d: { booleanValue: o.d }, j: { stringValue: o.j } } } })) });
     ch.forEach(o => { meta[o.id] = [o.h, o.u] }); saveMeta(meta) }
-  stat = { up: ops.length, down: toPut.length + toDel.length } }
+  if (wipe) ls.del("mt_sync_wipe");
+  stat = { up: ops.length, down: puts.length + dels0.length, bad } }
 
 /* ---------- déclencheurs et affichage ---------- */
 const FR = { EMAIL_EXISTS: "Ce compte existe déjà : utilise « Se connecter ».", INVALID_LOGIN_CREDENTIALS: "Email ou mot de passe incorrect.", INVALID_PASSWORD: "Mot de passe incorrect.",
@@ -113,7 +142,7 @@ async function run(manual) {
   if (busy) { again = true; return }
   if (navigator.onLine === false) { say("Hors ligne : la synchro reprendra toute seule."); return }
   busy = true; say("Synchronisation…");
-  try { await core(); const t = new Date(); say("Synchronisé à " + t.getHours() + "h" + String(t.getMinutes()).padStart(2, "0") + " (" + stat.up + " envoyée" + (stat.up > 1 ? "s" : "") + ", " + stat.down + " reçue" + (stat.down > 1 ? "s" : "") + ")") }
+  try { await core(); const t = new Date(); say("Synchronisé à " + t.getHours() + "h" + String(t.getMinutes()).padStart(2, "0") + " (" + stat.up + " envoyée" + (stat.up > 1 ? "s" : "") + ", " + stat.down + " reçue" + (stat.down > 1 ? "s" : "") + ")" + (stat.bad ? " — " + stat.bad + " fiche(s) distante(s) illisible(s) ignorée(s)" : "")) }
   catch (e) { if (e.message === "NOLOGIN") say("Session expirée : reconnecte-toi."); else say("Synchro impossible : " + msg(e)) }
   finally { busy = false; if (again) { again = false; later(1500) } } }
 const later = ms => { clearTimeout(tm); tm = setTimeout(run, ms) };
@@ -133,5 +162,7 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
 window.addEventListener("online", () => later(800));
 setInterval(() => { if (document.visibilityState === "visible") later(0) }, 120000);
 later(2500);
-window.MTSync = { run, login, logout };
+/* « vider la collection » voulu sur cet appareil : les suppressions sont envoyées aux autres appareils (la confirmation a déjà eu lieu côté appli) */
+const wipe = () => { ls.set("mt_sync_wipe", "1"); if (ls.get("mt_sync_wipe") !== "1") { say("Impossible de mémoriser la suppression : elle ne sera pas envoyée aux autres appareils."); return } later(300) };
+window.MTSync = { run, login, logout, wipe, active: () => !!ls.get("mt_sync_rt") };
 })();

@@ -1,6 +1,6 @@
 {
-  "name": "My Mediatheque",
-  "short_name": "My Mediatheque",
+  "name": "MMT",
+  "short_name": "MMT",
   "description": "Ma collection de films, séries, musique et livres",
   "lang": "fr",
   "start_url": "./",

@@ -1,7 +1,8 @@
 /* My Mediatheque — cache limité à cette application */
-const CACHE = "my-mediatheque-v12";
-const APP_SHELL = ["./", "./index.html", "./style.css", "./app.js"];
-const OPTIONAL = ["./manifest.json", "./icon-192.png", "./icon-512.png", "./sync.js"];
+const CACHE = "my-mediatheque-v13";  // à incrémenter à chaque déploiement : les anciennes versions sont supprimées à l'activation
+// app.js et sync.js sont installés ensemble : jamais deux versions différentes mélangées hors ligne.
+const APP_SHELL = ["./", "./index.html", "./style.css", "./app.js", "./sync.js"];
+const OPTIONAL = ["./manifest.json", "./icon-192.png", "./icon-512.png"];
 const IMG_MAX = 250;       // nombre maximal d'affiches gardées pour le hors-ligne
 const NET_TIMEOUT = 4000;  // réseau trop lent : on sert la copie en cache
 
@@ -47,7 +48,7 @@ self.addEventListener("fetch", event => {
         // En mode CORS la réponse est lisible (pas « opaque ») : elle ne gonfle pas le quota de stockage.
         response = await fetch(url.href, { mode: "cors", credentials: "omit" });
       } catch (e) {
-        response = await fetch(request);
+        try { response = await fetch(request) } catch (e2) { return new Response("", { status: 504, statusText: "Hors ligne" }) }
       }
       if (response.ok) {
         event.waitUntil(cache.put(request, response.clone()).then(() => trimImages(cache)).catch(() => {}));
@@ -59,19 +60,25 @@ self.addEventListener("fetch", event => {
 
   // Ne traite que les fichiers servis dans le sous-dossier de cette application.
   if (url.origin !== scope.origin || !url.pathname.startsWith(scope.pathname)) return;
+  const isPage = request.mode === "navigate" || (request.headers.get("accept") || "").includes("text/html");
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
     const net = fetch(request).then(response => {
-      if (response.ok) cache.put(request, response.clone()).catch(() => {});
+      // On ne garde que les vraies réponses complètes de notre site (pas d'erreur, pas de réponse partielle).
+      if (response.ok && response.status === 200 && response.type === "basic") cache.put(request, response.clone()).catch(() => {});
       return response;
     });
     event.waitUntil(net.catch(() => {}));
-    const fallback = async () => (await cache.match(request, { ignoreSearch: true })) || (await cache.match("./index.html"));
     try {
       // Réseau d'abord ; s'il traîne (mauvaise connexion), on sert la copie locale.
       return await Promise.race([net, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), NET_TIMEOUT))]);
     } catch (error) {
-      return (await fallback()) || net;
+      const hit = await cache.match(request, { ignoreSearch: true });
+      if (hit) return hit;
+      // index.html n'est un repli valable que pour une PAGE ; jamais pour un script, une feuille de style ou une image.
+      if (isPage) { const shell = (await cache.match("./index.html")) || (await cache.match("./")); if (shell) return shell }
+      try { return await net } catch (e) {}
+      return new Response("", { status: 504, statusText: "Hors ligne", headers: { "Content-Type": "text/plain; charset=utf-8" } });
     }
   })());
 });
